@@ -6,7 +6,7 @@ CREATE TABLE Participante (
     cpf VARCHAR(14) PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     emailInstitucional VARCHAR(100) UNIQUE NOT NULL,
-    tipo VARCHAR(50) NOT NULL,
+    tipo VARCHAR(50) NOT NULL
 );
 
 -- Tabela Projeto
@@ -16,7 +16,7 @@ CREATE TABLE Projeto (
     descricao text,
     situacao VARCHAR(50) NOT NULL,
     dataInicio DATETIME,
-    dataFim DATETIME,
+    dataFim DATETIME
 )
 
 -- Tabela Associativa Projeto_Participante (N:N)

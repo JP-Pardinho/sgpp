@@ -73,4 +73,11 @@ app.UseCors(corsPolicyName);
 app.UseAuthorization();
 app.MapControllers();
 
+app.MapGet("/api/health", async (Func<MySqlConnection> createConnection) =>
+{
+    await using var conn = createConnection();
+    await conn.OpenAsync();
+    return Results.Ok(new { status = "ok", banco = conn.Database });
+});
+
 app.Run();
