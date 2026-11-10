@@ -17,7 +17,17 @@ CREATE TABLE Projeto (
     situacao VARCHAR(50) NOT NULL,
     dataInicio DATETIME,
     dataFim DATETIME
-)
+);
+
+CREATE TABLE Financiamento (
+    id_financiamento INT PRIMARY KEY,
+    agenciaFinanciadora VARCHAR(100) NOT NULL,
+    tipoFomento VARCHAR(50) NOT NULL,
+    valorTotal DECIMAL(15,2) NOT NULL,
+    periodoVigencia VARCHAR(50) NOT NULL
+);
+
+
 
 -- Tabela Associativa Projeto_Participante (N:N)
 CREATE TABLE Projeto_Participante (
@@ -33,19 +43,28 @@ CREATE TABLE Projeto_Participante (
 
 -- Tabela Producao Cientifica
 CREATE TABLE Producao_Cientifica (
-    producao_id INT PRIMARY KEY AUTO_INCREMENT,
+    id_producao INT PRIMARY KEY AUTO_INCREMENT,
     titulo VARCHAR(50),
     tipoProducao VARCHAR(50),
     anoPublicacao INT,
     meioDivulgacao VARCHAR(50),
-    codigo_projeto VARCHAR(10),
-    FOREIGN KEY (codigo_projeto) REFERENCES Projeto(codigo) ON DELETE CASCADE
+    projeto_codigo VARCHAR(10),
+    FOREIGN KEY (projeto_codigo) REFERENCES Projeto(codigo) ON DELETE CASCADE
+);
+
+CREATE TABLE Apoio_Financeiro (
+    projeto_codigo VARCHAR(10) PRIMARY KEY,
+    id_financiamento INT PRIMARY KEY,
+    tipoVinculo VARCHAR(50) NOT NULL,
+    FOREIGN KEY (projeto_codigo) REFERENCES Projeto(codigo) ON DELETE CASCADE,
+    FOREIGN KEY (id_financiamento) REFERENCES Financiamento(id_financiamento) ON DELETE CASCADE
 );
 
 CREATE TABLE Producao_Autor (
     producao_id INT,
-    participate_cpf CHAR(11)
+    participante_cpf CHAR(11),
     PRIMARY KEY (producao_id, participante_cpf),
-    FOREIGN KEY (producao)
+    FOREIGN KEY (producao_id) REFERENCES Producao_Cientifica(id_producao) ON DELETE CASCADE,
+    FOREIGN KEY (participante_cpf) REFERENCES Participante(cpf) ON DELETE CASCADE
 );
 
