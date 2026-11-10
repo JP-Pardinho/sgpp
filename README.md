@@ -74,7 +74,7 @@ git clone https://github.com/JP-Pardinho/sistema-de-gerenciamento-de-projetos-de
 cd sistema-de-gerenciamento-de-projetos-de-pesquisa
 ```
 
-*(Caso utilize SSH: `git clone git@github.com:JP-Pardinho/sistema-de-gerenciamento-de-projetos-de-pesquisa.git`)*
+*(Caso utilize SSH: `git clone git@github.com:JP-Pardinho/sgpp.git`)*
 
 ---
 
