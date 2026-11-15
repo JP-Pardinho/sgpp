@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f9ff;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,15 +12,18 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Paleta institucional do SGPP */
+@theme {
+  --color-sgpp-50: #eef4ff;
+  --color-sgpp-100: #dbe7fb;
+  --color-sgpp-600: #1d4ed8;
+  --color-sgpp-700: #003c8f;
+  --color-sgpp-800: #213f70;
+  --color-sgpp-900: #12274a;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

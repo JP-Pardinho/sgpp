@@ -1,16 +1,41 @@
+import { lerToken, limparSessao } from "@/lib/session";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
 
+/** Quando true, os services usam dados de exemplo (services/mock.ts) em vez da API. */
+export const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = lerToken();
+
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Erro na requisição (${response.status}): ${response.statusText}`);
+    // Sessão expirada: limpa e volta para o login (exceto na própria tentativa de login)
+    if (response.status === 401 && !endpoint.startsWith("/auth/login")) {
+      limparSessao();
+      window.location.href = "/login";
+    }
+    throw new ApiError(
+      response.status,
+      `Erro na requisição (${response.status}): ${response.statusText}`,
+    );
   }
 
   if (response.status === 204) {
