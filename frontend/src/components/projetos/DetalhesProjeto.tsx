@@ -30,6 +30,7 @@ export default function DetalhesProjeto() {
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!codigo) return;
     let ativo = true;
     Promise.all([
       projetosService.buscarPorCodigo(codigo),
@@ -93,6 +94,7 @@ export default function DetalhesProjeto() {
           <SecaoTabela
             titulo="Equipe"
             textoBotao="Vincular participante"
+            hrefBotao={`/participantes/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
             colunas={["Nome", "Tipo", "Função", "Entrada", "Saída", "Ações"]}
             vazio="Nenhum participante vinculado."
             quantidade={dados.equipe.length}

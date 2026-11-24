@@ -4,21 +4,26 @@ import type { Dashboard } from "./dashboardServices";
 import type { LoginPayload, LoginResposta } from "./authService";
 import type { Participante } from "./participanteServices";
 import type { Projeto } from "./projetoServices";
-import type { EquipeMembro, FinanciamentoVinculado, ProducaoVinculada } from "./vinculoServices";
+import type {
+  EquipeMembro,
+  FinanciamentoVinculado,
+  ProducaoVinculada,
+  VincularParticipantePayload,
+} from "./vinculoServices";
 
 const atraso = <T,>(valor: T, ms = 250) =>
   new Promise<T>((resolve) => setTimeout(() => resolve(valor), ms));
 
 const participantes: Participante[] = [
-  { cpf: "111.111.111-11", nome: "Prof. Carlos Mendes", tipo: "Docente" },
-  { cpf: "222.222.222-22", nome: "Dra. Silvia das Dores Rissino", tipo: "Docente" },
-  { cpf: "333.333.333-33", nome: "Dr. Carlos Eduardo Moronari", tipo: "Docente" },
-  { cpf: "444.444.444-44", nome: "Prof. Gabriel dos Santos Lima", tipo: "Docente" },
-  { cpf: "555.555.555-55", nome: "João Pedro Pardinho", tipo: "Docente" },
-  { cpf: "666.666.666-66", nome: "Joaquim Moizes Honorato de Sá", tipo: "Docente" },
-  { cpf: "777.777.777-77", nome: "Nícolas Leal Espindula", tipo: "Docente" },
-  { cpf: "888.888.888-88", nome: "Mariana Souza Silva", tipo: "Discente" },
-  { cpf: "999.999.999-99", nome: "Roberto Alves de Oliveira", tipo: "Técnico" },
+  { cpf: "111.111.111-11", nome: "Prof. Carlos Mendes", email: "carlos.mendes@ufes.br", tipo: "Docente" },
+  { cpf: "222.222.222-22", nome: "Dra. Silvia das Dores Rissino", email: "silvia.rissino@ufes.br", tipo: "Docente" },
+  { cpf: "333.333.333-33", nome: "Dr. Carlos Eduardo Moronari", email: "carlos.moronari@ufes.br", tipo: "Docente" },
+  { cpf: "444.444.444-44", nome: "Prof. Gabriel dos Santos Lima", email: "gabriel.lima@ufes.br", tipo: "Docente" },
+  { cpf: "555.555.555-55", nome: "João Pedro Pardinho", email: "joao.pardinho@ufes.br", tipo: "Docente" },
+  { cpf: "666.666.666-66", nome: "Joaquim Moizes Honorato de Sá", email: "joaquim.sa@ufes.br", tipo: "Docente" },
+  { cpf: "777.777.777-77", nome: "Nícolas Leal Espindula", email: "nicolas.espindula@ufes.br", tipo: "Docente" },
+  { cpf: "888.888.888-88", nome: "Mariana Souza Silva", email: "mariana.silva@edu.ufes.br", tipo: "Discente" },
+  { cpf: "999.999.999-99", nome: "Roberto Alves de Oliveira", email: "roberto.oliveira@ufes.br", tipo: "Técnico" },
 ];
 
 const nomeDe = (cpf: string) => participantes.find((p) => p.cpf === cpf)?.nome ?? "";
@@ -73,10 +78,39 @@ const projetos: Projeto[] = [
 ];
 
 const equipe: EquipeMembro[] = [
-  { cpf: "111.111.111-11", nome: "Carlos Mendes", tipo: "Docente", funcao: "Coordenador", dataEntrada: "2026-03-01", dataSaida: null },
-  { cpf: "888.888.888-88", nome: "Mariana Souza Silva", tipo: "Discente", funcao: "Bolsista de IC", dataEntrada: "2026-03-01", dataSaida: "2027-02-28" },
+  { cpf: "111.111.111-11", nome: "Prof. Carlos Mendes", tipo: "Docente", funcao: "Coordenador", dataEntrada: "2026-03-01", dataSaida: null },
+  { cpf: "888.888.888-88", nome: "Mariana Souza Silva", tipo: "Discente", funcao: "Bolsista", dataEntrada: "2026-03-01", dataSaida: "2027-02-28" },
   { cpf: "999.999.999-99", nome: "Roberto Alves de Oliveira", tipo: "Técnico", funcao: "Apoio Técnico", dataEntrada: "2026-04-01", dataSaida: "2028-02-28" },
 ];
+
+const equipesPorProjeto: Record<string, EquipeMembro[]> = {
+  "PRJ-2026-014": equipe,
+};
+
+function obterOuCriarEquipe(codigo: string): EquipeMembro[] {
+  if (equipesPorProjeto[codigo]) return equipesPorProjeto[codigo];
+
+  const projeto = projetos.find((p) => p.codigo === codigo);
+  if (!projeto?.coordenadorCpf) {
+    equipesPorProjeto[codigo] = [];
+    return equipesPorProjeto[codigo];
+  }
+
+  const cpfDigitos = projeto.coordenadorCpf.replace(/\D/g, "");
+  const coord = participantes.find((p) => p.cpf.replace(/\D/g, "") === cpfDigitos);
+
+  equipesPorProjeto[codigo] = [
+    {
+      cpf: coord?.cpf ?? projeto.coordenadorCpf,
+      nome: coord?.nome ?? projeto.coordenadorNome ?? "Coordenador",
+      tipo: coord?.tipo ?? "Docente",
+      funcao: "Coordenador",
+      dataEntrada: projeto.dataInicio,
+      dataSaida: null,
+    },
+  ];
+  return equipesPorProjeto[codigo];
+}
 
 const financiamentos: FinanciamentoVinculado[] = [
   { idFinanciamento: 1, agencia: "CNPq", tipoFomento: "Bolsa", tipoVinculo: "Total", dataInicio: "2026-03-01", dataFim: "2028-02-28", valor: 48000 },
@@ -132,7 +166,91 @@ export const mockApi = {
   },
 
   listarParticipantes: () => atraso([...participantes], 100),
-  listarEquipe: () => atraso([...equipe]),
+
+  buscarParticipante: async (cpf: string) => {
+    const alvo = cpf.replace(/\D/g, "");
+    const encontrado = participantes.find(
+      (p) => p.cpf === cpf || p.cpf.replace(/\D/g, "") === alvo,
+    );
+    if (!encontrado) throw new Error("Participante não encontrado.");
+    return atraso({ ...encontrado });
+  },
+
+  criarParticipante: async (participante: Participante) => {
+    const cpfDigitos = participante.cpf.replace(/\D/g, "");
+    const emailNorm = (participante.email ?? "").trim().toLowerCase();
+
+    if (participantes.some((p) => p.cpf.replace(/\D/g, "") === cpfDigitos)) {
+      throw new Error("Já existe um participante cadastrado com este CPF.");
+    }
+    if (emailNorm && participantes.some((p) => (p.email ?? "").trim().toLowerCase() === emailNorm)) {
+      throw new Error("Já existe um participante cadastrado com este e-mail institucional.");
+    }
+
+    const novo: Participante = {
+      cpf: participante.cpf.trim(),
+      nome: participante.nome.trim(),
+      email: participante.email?.trim(),
+      tipo: participante.tipo,
+    };
+    participantes.unshift(novo);
+    return atraso({ ...novo });
+  },
+
+  excluirParticipante: async (cpf: string) => {
+    const alvo = cpf.replace(/\D/g, "");
+    const i = participantes.findIndex(
+      (p) => p.cpf === cpf || p.cpf.replace(/\D/g, "") === alvo,
+    );
+    if (i >= 0) participantes.splice(i, 1);
+    return atraso(undefined);
+  },
+
+  listarEquipe: (codigo = "PRJ-2026-014") =>
+    atraso(obterOuCriarEquipe(codigo).map((m) => ({ ...m }))),
+
+  vincularParticipante: async (codigo: string, payload: VincularParticipantePayload) => {
+    const lista = obterOuCriarEquipe(codigo);
+    const cpfAlvo = payload.participanteCpf.replace(/\D/g, "");
+
+    if (lista.some((m) => m.cpf.replace(/\D/g, "") === cpfAlvo)) {
+      throw new Error("Este participante já está vinculado ao projeto.");
+    }
+
+    if (
+      payload.funcao.trim().toLowerCase() === "coordenador" &&
+      lista.some((m) => m.funcao.trim().toLowerCase() === "coordenador")
+    ) {
+      throw new Error(
+        "VALIDAÇÃO DE COORDENAÇÃO: Este projeto já possui um coordenador principal. Escolha outra função.",
+      );
+    }
+
+    const participante = participantes.find((p) => p.cpf.replace(/\D/g, "") === cpfAlvo);
+    if (!participante) {
+      throw new Error("Participante não encontrado.");
+    }
+
+    const novo: EquipeMembro = {
+      cpf: participante.cpf,
+      nome: participante.nome,
+      tipo: participante.tipo,
+      funcao: payload.funcao,
+      dataEntrada: payload.dataEntrada,
+      dataSaida: payload.dataSaida || null,
+    };
+
+    lista.push(novo);
+    return atraso({ ...novo });
+  },
+
+  removerParticipante: async (codigo: string, cpf: string) => {
+    const lista = obterOuCriarEquipe(codigo);
+    const cpfAlvo = cpf.replace(/\D/g, "");
+    const idx = lista.findIndex((m) => m.cpf.replace(/\D/g, "") === cpfAlvo);
+    if (idx >= 0) lista.splice(idx, 1);
+    return atraso(undefined);
+  },
   listarFinanciamentos: () => atraso([...financiamentos]),
   listarProducoes: () => atraso([...producoes]),
 
