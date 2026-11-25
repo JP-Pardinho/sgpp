@@ -1,3 +1,4 @@
+DROP DATABASE IF EXISTS sgpp_db;
 CREATE DATABASE sgpp_db;
 USE sgpp_db;
 
@@ -13,7 +14,7 @@ CREATE TABLE Participante (
 
 -- Tabela Projeto
 CREATE TABLE Projeto (
-    codigo CHAR(30) PRIMARY KEY,
+    codigo VARCHAR(30) PRIMARY KEY,
     titulo VARCHAR(255) NOT NULL,
     descricao TEXT,
     situacao VARCHAR(50) NOT NULL,
