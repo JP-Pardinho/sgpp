@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense } from "react";
-import Icon, { type NomeIcone } from "@/components/ui/Icon";
+import Icon, { type NomeIcone } from "@/app/_components/ui/Icon";
 import { limparSessao } from "@/lib/session";
 
 const ITENS: { rotulo: string; href: string; icone: NomeIcone }[] = [
-  { rotulo: "Dashboard", href: "/dashboard", icone: "home" },
+  { rotulo: "Dashboard", href: "/", icone: "home" },
   { rotulo: "Projetos", href: "/projetos", icone: "folder" },
   { rotulo: "Participantes", href: "/participantes", icone: "users" },
   { rotulo: "Financiamentos", href: "/financiamentos", icone: "card" },
@@ -21,7 +21,9 @@ function ListaLinks({ pathname }: { pathname: string | null }) {
       {ITENS.map((item) => {
         const ativo =
           pathname !== null &&
-          (pathname === item.href || pathname.startsWith(`${item.href}/`));
+          (item.href === "/"
+            ? pathname === "/"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`));
         return (
           <Link
             key={item.href}

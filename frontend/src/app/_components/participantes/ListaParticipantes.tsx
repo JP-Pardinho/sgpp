@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { btnContorno, inputBase } from "@/components/ui/Botoes";
-import Icon from "@/components/ui/Icon";
+import { btnContorno, inputBase } from "@/app/_components/ui/Botoes";
+import Icon from "@/app/_components/ui/Icon";
 import { formatarCpf, somenteDigitos } from "@/lib/validacao";
 import { TIPOS_PARTICIPANTE, type Participante } from "@/services/participanteServices";
 

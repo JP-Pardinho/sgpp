@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import PaginaSistema from "@/components/layout/PaginaSistema";
-import { btnContorno, btnPrimario, inputBase } from "@/components/ui/Botoes";
-import Icon from "@/components/ui/Icon";
+import PaginaSistema from "@/app/_components/layout/PaginaSistema";
+import { btnContorno, btnPrimario, inputBase } from "@/app/_components/ui/Botoes";
+import Icon from "@/app/_components/ui/Icon";
 import {
   producoesService,
   TIPOS_PRODUCAO,
@@ -74,7 +74,7 @@ export default function ListaProducoesTela() {
     <PaginaSistema
       titulo="Produções Científicas"
       breadcrumb={[
-        { rotulo: "Início", href: "/dashboard" },
+        { rotulo: "Início", href: "/" },
         { rotulo: "Produções científicas" },
       ]}
       acoes={

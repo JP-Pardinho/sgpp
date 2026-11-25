@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import ParticipantesTela from "@/components/participantes/ParticipantesTela";
+import ParticipantesTela from "@/app/_components/participantes/ParticipantesTela";
 
 // Tela 5.7 - Cadastrar e Listar Participantes (/participantes)
 export default function ParticipantesPage() {

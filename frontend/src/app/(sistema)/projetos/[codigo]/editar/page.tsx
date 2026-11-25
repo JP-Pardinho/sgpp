@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import EditarProjeto from "@/components/projetos/EditarProjeto";
+import EditarProjeto from "@/app/_components/projetos/EditarProjeto";
 
 export default function EditarProjetoPage() {
-  return (
-    <Suspense fallback={null}>
-      <EditarProjeto />
-    </Suspense>
-  );
+    return (
+        <Suspense fallback={null}>
+            <EditarProjeto />
+        </Suspense>
+    );
 }

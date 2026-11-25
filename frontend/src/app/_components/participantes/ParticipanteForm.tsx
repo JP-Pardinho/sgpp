@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { btnPrimario, btnSecundario, inputBase } from "@/components/ui/Botoes";
-import Icon from "@/components/ui/Icon";
+import { btnPrimario, btnSecundario, inputBase } from "@/app/_components/ui/Botoes";
+import Icon from "@/app/_components/ui/Icon";
 import {
   formatarCpf,
   somenteDigitos,

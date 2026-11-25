@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import PaginaSistema from "@/components/layout/PaginaSistema";
-import { btnContorno, btnPrimario } from "@/components/ui/Botoes";
-import Icon from "@/components/ui/Icon";
+import PaginaSistema from "@/app/_components/layout/PaginaSistema";
+import { btnContorno, btnPrimario } from "@/app/_components/ui/Botoes";
+import Icon from "@/app/_components/ui/Icon";
 import { somenteDigitos } from "@/lib/validacao";
 import { participantesService, type Participante } from "@/services/participanteServices";
 import ListaParticipantes from "./ListaParticipantes";
@@ -81,12 +81,12 @@ function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
       breadcrumb={
         aba === "listar"
           ? [
-              { rotulo: "Início", href: "/dashboard" },
+              { rotulo: "Início", href: "/" },
               { rotulo: "Participantes" },
               { rotulo: "Lista de participantes" },
             ]
           : [
-              { rotulo: "Início", href: "/dashboard" },
+              { rotulo: "Início", href: "/" },
               { rotulo: "Participantes", href: "/participantes" },
               { rotulo: "Cadastrar participante" },
             ]

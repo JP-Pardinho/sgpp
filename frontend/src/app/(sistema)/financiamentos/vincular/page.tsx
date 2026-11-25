@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import VincularFinanciamentoTela from "@/components/financiamentos/VincularFinanciamentoTela";
+import VincularFinanciamentoTela from "@/app/_components/financiamentos/VincularFinanciamentoTela";
 
 // Tela 5.5 - Vincular Financiamento ao Projeto (/financiamentos/vincular)
 export default function VincularFinanciamentoPage() {

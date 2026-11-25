@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import PaginaSistema from "@/components/layout/PaginaSistema";
-import { btnContorno, btnPrimario, inputBase } from "@/components/ui/Botoes";
-import Icon from "@/components/ui/Icon";
+import PaginaSistema from "@/app/_components/layout/PaginaSistema";
+import { btnContorno, btnPrimario, inputBase } from "@/app/_components/ui/Botoes";
+import Icon from "@/app/_components/ui/Icon";
 import { formatarData, formatarMoeda } from "@/lib/format";
 import {
   AGENCIAS_FINANCIADORAS,
@@ -70,7 +70,7 @@ export default function ListaFinanciamentosTela() {
     <PaginaSistema
       titulo="Financiamentos"
       breadcrumb={[
-        { rotulo: "Início", href: "/dashboard" },
+        { rotulo: "Início", href: "/" },
         { rotulo: "Financiamentos" },
       ]}
       acoes={

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import PaginaSistema from "@/components/layout/PaginaSistema";
-import { btnContorno, btnPrimario, btnSecundario, inputBase } from "@/components/ui/Botoes";
-import Icon from "@/components/ui/Icon";
+import PaginaSistema from "@/app/_components/layout/PaginaSistema";
+import { btnContorno, btnPrimario, btnSecundario, inputBase } from "@/app/_components/ui/Botoes";
+import Icon from "@/app/_components/ui/Icon";
 import { formatarData } from "@/lib/format";
 import { formatarCpf, somenteDigitos } from "@/lib/validacao";
 import { participantesService, type Participante } from "@/services/participanteServices";
@@ -203,7 +203,7 @@ function VincularParticipanteInterna({ projetoInicial }: { projetoInicial: strin
     <PaginaSistema
       titulo="Vincular Participantes"
       breadcrumb={[
-        { rotulo: "Início", href: "/dashboard" },
+        { rotulo: "Início", href: "/" },
         { rotulo: "Participantes", href: "/participantes" },
         { rotulo: "Vincular ao projeto" },
       ]}

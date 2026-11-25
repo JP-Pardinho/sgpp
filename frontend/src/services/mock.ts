@@ -74,8 +74,8 @@ const projetos: Projeto[] = [
     situacao,
     dataInicio: ini,
     dataFim: fim,
-    coordenadorCpf: cpf,
-    coordenadorNome: nomeDe(cpf),
+    coordenador_cpf: cpf,
+    coordenador_nome: nomeDe(cpf),
   })),
   ...Array.from({ length: 16 }, (_, i): Projeto => {
     const cpf = participantes[i % 7].cpf;
@@ -86,8 +86,8 @@ const projetos: Projeto[] = [
       situacao: sits[i % sits.length],
       dataInicio: "2026-01-15",
       dataFim: `202${7 + (i % 2)}-0${1 + (i % 9)}-28`,
-      coordenadorCpf: cpf,
-      coordenadorNome: nomeDe(cpf),
+      coordenador_cpf: cpf,
+      coordenador_nome: nomeDe(cpf),
     };
   }),
 ];
@@ -106,18 +106,18 @@ function obterOuCriarEquipe(codigo: string): EquipeMembro[] {
   if (equipesPorProjeto[codigo]) return equipesPorProjeto[codigo];
 
   const projeto = projetos.find((p) => p.codigo === codigo);
-  if (!projeto?.coordenadorCpf) {
+  if (!projeto?.coordenador_cpf) {
     equipesPorProjeto[codigo] = [];
     return equipesPorProjeto[codigo];
   }
 
-  const cpfDigitos = projeto.coordenadorCpf.replace(/\D/g, "");
+  const cpfDigitos = projeto.coordenador_cpf.replace(/\D/g, "");
   const coord = participantes.find((p) => p.cpf.replace(/\D/g, "") === cpfDigitos);
 
   equipesPorProjeto[codigo] = [
     {
-      cpf: coord?.cpf ?? projeto.coordenadorCpf,
-      nome: coord?.nome ?? projeto.coordenadorNome ?? "Coordenador",
+      cpf: coord?.cpf ?? projeto.coordenador_cpf,
+      nome: coord?.nome ?? projeto.coordenador_nome ?? "Coordenador",
       tipo: coord?.tipo ?? "Docente",
       funcao: "Coordenador",
       dataEntrada: projeto.dataInicio,
@@ -251,7 +251,7 @@ export const mockApi = {
     if (projetos.some((p) => p.codigo === projeto.codigo)) {
       throw new Error("Já existe um projeto com este código.");
     }
-    const novo = { ...projeto, coordenadorNome: nomeDe(projeto.coordenadorCpf ?? "") };
+    const novo = { ...projeto, coordenador_nome: nomeDe(projeto.coordenador_cpf ?? "") };
     projetos.unshift(novo);
     return atraso(novo);
   },
@@ -259,7 +259,7 @@ export const mockApi = {
   atualizarProjeto: async (codigo: string, projeto: Projeto) => {
     const i = projetos.findIndex((p) => p.codigo === codigo);
     if (i < 0) throw new Error("Projeto não encontrado.");
-    projetos[i] = { ...projeto, coordenadorNome: nomeDe(projeto.coordenadorCpf ?? "") };
+    projetos[i] = { ...projeto, coordenador_nome: nomeDe(projeto.coordenador_cpf ?? "") };
     return atraso(projetos[i]);
   },
 
@@ -584,19 +584,19 @@ export const mockApi = {
     if (tipo === "projetos-por-coordenador") {
       const filtroDigitos = filtroLimpo.replace(/\D/g, "");
       const filtrados = filtroDigitos
-        ? projetos.filter((p) => (p.coordenadorCpf ?? "").replace(/\D/g, "") === filtroDigitos)
+        ? projetos.filter((p) => (p.coordenador_cpf ?? "").replace(/\D/g, "") === filtroDigitos)
         : projetos;
 
       const mapa = new Map<string, Projeto[]>();
       for (const p of filtrados) {
-        const chave = p.coordenadorCpf ?? "sem-coordenador";
+        const chave = p.coordenador_cpf ?? "sem-coordenador";
         const lista = mapa.get(chave) ?? [];
         lista.push(p);
         mapa.set(chave, lista);
       }
 
       const grupos: GrupoConsulta[] = Array.from(mapa.entries()).map(([cpf, lista]) => {
-        const nome = lista[0]?.coordenadorNome || nomeDe(cpf) || "Coordenador não informado";
+        const nome = lista[0]?.coordenador_nome || nomeDe(cpf) || "Coordenador não informado";
         const emAndamento = lista.filter((p) => p.situacao === "Em andamento").length;
         return {
           chave: cpf,
@@ -616,8 +616,8 @@ export const mockApi = {
       });
 
       const linhasCsv = filtrados.map((p) => [
-        p.coordenadorNome || nomeDe(p.coordenadorCpf ?? "") || "-",
-        formatarCpf(p.coordenadorCpf ?? ""),
+        p.coordenador_nome || nomeDe(p.coordenador_cpf ?? "") || "-",
+        formatarCpf(p.coordenador_cpf ?? ""),
         p.codigo,
         p.titulo,
         p.situacao,
@@ -656,7 +656,7 @@ export const mockApi = {
         grupos.push({
           chave: proj.codigo,
           titulo: `${proj.codigo} — ${proj.titulo}`,
-          subtitulo: `Situação: ${proj.situacao} · Coordenador: ${proj.coordenadorNome ?? "-"}`,
+          subtitulo: `Situação: ${proj.situacao} · Coordenador: ${proj.coordenador_nome ?? "-"}`,
           colunas: ["Participante", "CPF", "Tipo", "Função", "Entrada", "Saída"],
           linhas: equipeProj.map((m) => [
             m.nome,
