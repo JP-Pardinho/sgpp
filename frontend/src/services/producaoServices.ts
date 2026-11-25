@@ -34,6 +34,7 @@ export interface NovaProducao {
   tipo: string;
   ano: number;
   meioDivulgacao: string;
+  projetoCodigo?: string | null;
 }
 
 export interface VincularProducaoPayload {
@@ -42,35 +43,122 @@ export interface VincularProducaoPayload {
   autoresCpfs: string[];
 }
 
+export interface FiltrosProducao {
+  tipoProducao?: string;
+  anoPublicacao?: number;
+  projeto_codigo?: string;
+}
+
+interface ProducaoApiDto {
+  id_producao?: number;
+  id?: number;
+  projeto_codigo?: string | null;
+  projetoCodigo?: string | null;
+  projetoTitulo?: string | null;
+  titulo: string;
+  tipoProducao?: string;
+  tipo?: string;
+  anoPublicacao?: number;
+  ano?: number;
+  meioDivulgacao: string;
+  autores?: AutorProducao[];
+}
+
+function normalizarProducaoApi(raw: ProducaoApiDto): ProducaoCientifica {
+  return {
+    id: raw.id_producao ?? raw.id ?? 0,
+    titulo: raw.titulo,
+    tipo: raw.tipoProducao ?? raw.tipo ?? "",
+    ano: raw.anoPublicacao ?? raw.ano ?? 0,
+    meioDivulgacao: raw.meioDivulgacao,
+    projetoCodigo: raw.projeto_codigo ?? raw.projetoCodigo ?? null,
+    projetoTitulo: raw.projetoTitulo ?? null,
+    autores: Array.isArray(raw.autores) ? raw.autores : [],
+  };
+}
+
 export const producoesService = {
-  listar: (): Promise<ProducaoCientifica[]> =>
-    USE_MOCK
-      ? mockApi.listarCatalogoProducoes()
-      : apiFetch<ProducaoCientifica[]>("/producoes"),
+  listar: async (filtros?: FiltrosProducao): Promise<ProducaoCientifica[]> => {
+    if (USE_MOCK) {
+      const lista = await mockApi.listarCatalogoProducoes();
+      if (!filtros) return lista;
+      return lista.filter((p) => {
+        if (filtros.tipoProducao && p.tipo !== filtros.tipoProducao) return false;
+        if (filtros.anoPublicacao && p.ano !== filtros.anoPublicacao) return false;
+        if (filtros.projeto_codigo && p.projetoCodigo !== filtros.projeto_codigo) return false;
+        return true;
+      });
+    }
 
-  buscarPorId: (id: number): Promise<ProducaoCientifica> =>
-    USE_MOCK
-      ? mockApi.buscarProducao(id)
-      : apiFetch<ProducaoCientifica>(`/producoes/${id}`),
+    const params = new URLSearchParams();
+    if (filtros?.tipoProducao) params.set("tipoProducao", filtros.tipoProducao);
+    if (filtros?.anoPublicacao) params.set("anoPublicacao", String(filtros.anoPublicacao));
+    if (filtros?.projeto_codigo) params.set("projeto_codigo", filtros.projeto_codigo);
+    const query = params.toString() ? `?${params.toString()}` : "";
 
-  criar: (dados: NovaProducao): Promise<ProducaoCientifica> =>
-    USE_MOCK
-      ? mockApi.criarProducao(dados)
-      : apiFetch<ProducaoCientifica>("/producoes", {
-          method: "POST",
-          body: JSON.stringify(dados),
-        }),
+    const dados = await apiFetch<ProducaoApiDto[]>(`/producoes${query}`);
+    return dados.map(normalizarProducaoApi);
+  },
 
-  vincular: (payload: VincularProducaoPayload): Promise<ProducaoCientifica> =>
-    USE_MOCK
-      ? mockApi.vincularProducao(payload)
-      : apiFetch<ProducaoCientifica>(`/producoes/${payload.producaoId}/vinculo`, {
-          method: "PUT",
-          body: JSON.stringify({
-            projetoCodigo: payload.projetoCodigo,
-            autoresCpfs: payload.autoresCpfs,
-          }),
-        }),
+  buscarPorId: async (id: number): Promise<ProducaoCientifica> => {
+    if (USE_MOCK) {
+      return mockApi.buscarProducao(id);
+    }
+
+    const dado = await apiFetch<ProducaoApiDto>(`/producoes/${id}`);
+    return normalizarProducaoApi(dado);
+  },
+
+  criar: async (dados: NovaProducao): Promise<ProducaoCientifica> => {
+    if (USE_MOCK) {
+      return mockApi.criarProducao(dados);
+    }
+
+    const criada = await apiFetch<ProducaoApiDto>("/producoes", {
+      method: "POST",
+      body: JSON.stringify({
+        projeto_codigo: dados.projetoCodigo ?? null,
+        titulo: dados.titulo,
+        tipoProducao: dados.tipo,
+        anoPublicacao: dados.ano,
+        meioDivulgacao: dados.meioDivulgacao,
+      }),
+    });
+    return normalizarProducaoApi(criada);
+  },
+
+  atualizar: async (id: number, dados: NovaProducao): Promise<ProducaoCientifica> => {
+    if (USE_MOCK) {
+      return mockApi.atualizarProducao(id, dados);
+    }
+
+    const atualizada = await apiFetch<ProducaoApiDto>(`/producoes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        projeto_codigo: dados.projetoCodigo ?? null,
+        titulo: dados.titulo,
+        tipoProducao: dados.tipo,
+        anoPublicacao: dados.ano,
+        meioDivulgacao: dados.meioDivulgacao,
+      }),
+    });
+    return normalizarProducaoApi(atualizada);
+  },
+
+  vincular: async (payload: VincularProducaoPayload): Promise<ProducaoCientifica> => {
+    if (USE_MOCK) {
+      return mockApi.vincularProducao(payload);
+    }
+
+    const atualizada = await apiFetch<ProducaoApiDto>(`/producoes/${payload.producaoId}/vinculo`, {
+      method: "PUT",
+      body: JSON.stringify({
+        projetoCodigo: payload.projetoCodigo,
+        autoresCpfs: payload.autoresCpfs,
+      }),
+    });
+    return normalizarProducaoApi(atualizada);
+  },
 
   excluir: (id: number): Promise<void> =>
     USE_MOCK

@@ -3,8 +3,16 @@ import { apiFetch, USE_MOCK } from "./api";
 import { mockApi } from "./mock";
 
 export interface LoginPayload {
-  email: string;
+  emailInstitucional: string;
   senha: string;
+}
+
+export interface UsuarioAutenticadoApi {
+  cpf: string;
+  nome: string;
+  emailInstitucional: string;
+  tipo: string;
+  perfilAcesso: string;
 }
 
 export interface LoginResposta {
@@ -13,12 +21,28 @@ export interface LoginResposta {
 }
 
 export const authService = {
-  // AT01 - autenticação. Ajuste a rota/formato conforme o back-end definir.
-  login: (payload: LoginPayload) =>
-    USE_MOCK
-      ? mockApi.login(payload)
-      : apiFetch<LoginResposta>("/auth/login", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }),
+  login: async (payload: LoginPayload): Promise<LoginResposta> => {
+    if (USE_MOCK) {
+      return mockApi.login(payload);
+    }
+
+    const dados = await apiFetch<UsuarioAutenticadoApi>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        emailInstitucional: payload.emailInstitucional,
+        senha: payload.senha,
+      }),
+    });
+
+    return {
+      token: `sgpp-session:${dados.cpf}`,
+      usuario: {
+        cpf: dados.cpf,
+        nome: dados.nome,
+        perfil: dados.perfilAcesso,
+        emailInstitucional: dados.emailInstitucional,
+        tipo: dados.tipo,
+      },
+    };
+  },
 };

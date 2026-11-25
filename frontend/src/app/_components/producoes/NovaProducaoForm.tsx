@@ -13,8 +13,8 @@ import {
 } from "@/services/producaoServices";
 
 const ANO_PADRAO = 2026;
-const ANO_MINIMO = 1950;
-const ANO_MAXIMO = 2030;
+const ANO_MINIMO = 1900;
+const ANO_MAXIMO = 2031;
 
 export default function NovaProducaoForm() {
   const [titulo, setTitulo] = useState("");

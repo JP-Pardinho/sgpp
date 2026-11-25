@@ -70,8 +70,10 @@ function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
       const cpfAlvo = somenteDigitos(participante.cpf);
       setParticipantes((prev) => prev.filter((p) => somenteDigitos(p.cpf) !== cpfAlvo));
       setErroLista(null);
-    } catch {
-      setErroLista("Não foi possível excluir o participante.");
+    } catch (err) {
+      setErroLista(
+        err instanceof Error ? err.message : "Não foi possível excluir o participante.",
+      );
     }
   }
 

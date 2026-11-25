@@ -1,7 +1,9 @@
 export interface Usuario {
+  cpf?: string;
   nome: string;
   perfil: string;
-  email?: string;
+  emailInstitucional?: string;
+  tipo?: string;
 }
 
 export interface Sessao {

@@ -111,7 +111,7 @@ function VincularProducaoInterna({
     if (!termo) return participantes;
 
     return participantes.filter((p) => {
-      const bateTexto = normalizar(`${p.nome} ${p.email ?? ""} ${p.tipo}`).includes(termo);
+      const bateTexto = normalizar(`${p.nome} ${p.emailInstitucional ?? ""} ${p.tipo}`).includes(termo);
       const bateCpf = termoDigitos.length > 0 && somenteDigitos(p.cpf).includes(termoDigitos);
       return bateTexto || bateCpf;
     });
@@ -410,7 +410,7 @@ function VincularProducaoInterna({
                         <p className="font-medium text-slate-900">{p.nome}</p>
                         <p className="text-xs text-slate-500">
                           {formatarCpf(p.cpf)}
-                          {p.email ? ` · ${p.email}` : ""}
+                          {p.emailInstitucional ? ` · ${p.emailInstitucional}` : ""}
                         </p>
                       </div>
                     </div>

@@ -11,7 +11,7 @@ import type {
   NovoFinanciamento,
   VincularFinanciamentoPayload,
 } from "./financiamentoServices";
-import type { Participante } from "./participanteServices";
+import type { AtualizarParticipante, Participante } from "./participanteServices";
 import type {
   AutorProducao,
   NovaProducao,
@@ -30,15 +30,15 @@ const atraso = <T,>(valor: T, ms = 250) =>
   new Promise<T>((resolve) => setTimeout(() => resolve(valor), ms));
 
 const participantes: Participante[] = [
-  { cpf: "111.111.111-11", nome: "Prof. Carlos Mendes", email: "carlos.mendes@ufes.br", tipo: "Docente" },
-  { cpf: "222.222.222-22", nome: "Dra. Silvia das Dores Rissino", email: "silvia.rissino@ufes.br", tipo: "Docente" },
-  { cpf: "333.333.333-33", nome: "Dr. Carlos Eduardo Moronari", email: "carlos.moronari@ufes.br", tipo: "Docente" },
-  { cpf: "444.444.444-44", nome: "Prof. Gabriel dos Santos Lima", email: "gabriel.lima@ufes.br", tipo: "Docente" },
-  { cpf: "555.555.555-55", nome: "João Pedro Pardinho", email: "joao.pardinho@ufes.br", tipo: "Docente" },
-  { cpf: "666.666.666-66", nome: "Joaquim Moizes Honorato de Sá", email: "joaquim.sa@ufes.br", tipo: "Docente" },
-  { cpf: "777.777.777-77", nome: "Nícolas Leal Espindula", email: "nicolas.espindula@ufes.br", tipo: "Docente" },
-  { cpf: "888.888.888-88", nome: "Mariana Souza Silva", email: "mariana.silva@edu.ufes.br", tipo: "Discente" },
-  { cpf: "999.999.999-99", nome: "Roberto Alves de Oliveira", email: "roberto.oliveira@ufes.br", tipo: "Técnico" },
+  { cpf: "111.111.111-11", nome: "Prof. Carlos Mendes", emailInstitucional: "carlos.mendes@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "222.222.222-22", nome: "Dra. Silvia das Dores Rissino", emailInstitucional: "silvia.rissino@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "333.333.333-33", nome: "Dr. Carlos Eduardo Moronari", emailInstitucional: "carlos.moronari@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "444.444.444-44", nome: "Prof. Gabriel dos Santos Lima", emailInstitucional: "gabriel.lima@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "555.555.555-55", nome: "João Pedro Pardinho", emailInstitucional: "joao.pardinho@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "666.666.666-66", nome: "Joaquim Moizes Honorato de Sá", emailInstitucional: "joaquim.sa@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "777.777.777-77", nome: "Nícolas Leal Espindula", emailInstitucional: "nicolas.espindula@ufes.br", tipo: "Docente", perfilAcesso: "Coordenador" },
+  { cpf: "888.888.888-88", nome: "Mariana Souza Silva", emailInstitucional: "mariana.silva@edu.ufes.br", tipo: "Discente", perfilAcesso: "Participante" },
+  { cpf: "999.999.999-99", nome: "Roberto Alves de Oliveira", emailInstitucional: "roberto.oliveira@ufes.br", tipo: "Técnico", perfilAcesso: "Participante" },
 ];
 
 const nomeDe = (cpf: string) => participantes.find((p) => p.cpf === cpf)?.nome ?? "";
@@ -229,14 +229,32 @@ const catalogoProducoes: ProducaoCientifica[] = [
 let proximoIdProducao = 5;
 
 export const mockApi = {
-  login: ({ email, senha }: LoginPayload): Promise<LoginResposta> => {
-    if (!email.includes("@") || !senha) {
+  login: ({ emailInstitucional, senha }: LoginPayload): Promise<LoginResposta> => {
+    const emailNorm = emailInstitucional.trim().toLowerCase();
+    if (!emailNorm.includes("@") || !senha) {
       return atraso(null).then(() => {
-        throw new Error("E-mail ou senha inválidos.");
+        throw new Error("E-mail institucional ou senha inválidos.");
       });
     }
-    const usuario: Usuario = { nome: "Ana Souza", perfil: "Administrador", email };
-    return atraso({ token: "token-de-exemplo", usuario });
+    const encontrado = participantes.find(
+      (p) => p.emailInstitucional.trim().toLowerCase() === emailNorm,
+    );
+    const usuario: Usuario = encontrado
+      ? {
+          cpf: encontrado.cpf,
+          nome: encontrado.nome,
+          perfil: encontrado.perfilAcesso ?? "Participante",
+          emailInstitucional: encontrado.emailInstitucional,
+          tipo: encontrado.tipo,
+        }
+      : {
+          cpf: "111.111.111-01",
+          nome: "Ana Beatriz Souza",
+          perfil: "Administrador",
+          emailInstitucional: emailNorm,
+          tipo: "Técnico",
+        };
+    return atraso({ token: `token-de-exemplo:${usuario.cpf}`, usuario });
   },
 
   listarProjetos: () => atraso([...projetos]),
@@ -269,7 +287,12 @@ export const mockApi = {
     return atraso(undefined);
   },
 
-  listarParticipantes: () => atraso([...participantes], 100),
+  listarParticipantes: (tipo?: string) => {
+    const lista = tipo
+      ? participantes.filter((p) => p.tipo.toLowerCase() === tipo.trim().toLowerCase())
+      : [...participantes];
+    return atraso(lista, 100);
+  },
 
   buscarParticipante: async (cpf: string) => {
     const alvo = cpf.replace(/\D/g, "");
@@ -282,23 +305,53 @@ export const mockApi = {
 
   criarParticipante: async (participante: Participante) => {
     const cpfDigitos = participante.cpf.replace(/\D/g, "");
-    const emailNorm = (participante.email ?? "").trim().toLowerCase();
+    const emailNorm = (participante.emailInstitucional ?? "").trim().toLowerCase();
 
     if (participantes.some((p) => p.cpf.replace(/\D/g, "") === cpfDigitos)) {
       throw new Error("Já existe um participante cadastrado com este CPF.");
     }
-    if (emailNorm && participantes.some((p) => (p.email ?? "").trim().toLowerCase() === emailNorm)) {
+    if (
+      emailNorm &&
+      participantes.some((p) => (p.emailInstitucional ?? "").trim().toLowerCase() === emailNorm)
+    ) {
       throw new Error("Já existe um participante cadastrado com este e-mail institucional.");
     }
 
     const novo: Participante = {
       cpf: participante.cpf.trim(),
       nome: participante.nome.trim(),
-      email: participante.email?.trim(),
+      emailInstitucional: participante.emailInstitucional.trim().toLowerCase(),
       tipo: participante.tipo,
+      perfilAcesso: participante.perfilAcesso ?? "Participante",
     };
     participantes.unshift(novo);
     return atraso({ ...novo });
+  },
+
+  atualizarParticipante: async (cpf: string, dados: AtualizarParticipante) => {
+    const alvo = cpf.replace(/\D/g, "");
+    const i = participantes.findIndex(
+      (p) => p.cpf === cpf || p.cpf.replace(/\D/g, "") === alvo,
+    );
+    if (i < 0) throw new Error("Participante não encontrado.");
+
+    const emailNorm = dados.emailInstitucional.trim().toLowerCase();
+    if (
+      participantes.some(
+        (p, idx) => idx !== i && p.emailInstitucional.trim().toLowerCase() === emailNorm,
+      )
+    ) {
+      throw new Error("Já existe um participante cadastrado com este e-mail institucional.");
+    }
+
+    participantes[i] = {
+      ...participantes[i],
+      nome: dados.nome.trim(),
+      emailInstitucional: emailNorm,
+      tipo: dados.tipo,
+      perfilAcesso: dados.perfilAcesso ?? participantes[i].perfilAcesso ?? "Participante",
+    };
+    return atraso({ ...participantes[i] });
   },
 
   excluirParticipante: async (cpf: string) => {
@@ -385,8 +438,13 @@ export const mockApi = {
   },
 
   criarFinanciamento: async (dados: NovoFinanciamento) => {
-    const processoNorm = dados.numeroProcesso.trim().toLowerCase();
-    if (catalogoFinanciamentos.some((f) => f.numeroProcesso.trim().toLowerCase() === processoNorm)) {
+    const processoNorm = (dados.numeroProcesso ?? "").trim().toLowerCase();
+    if (
+      processoNorm &&
+      catalogoFinanciamentos.some(
+        (f) => (f.numeroProcesso ?? "").trim().toLowerCase() === processoNorm,
+      )
+    ) {
       throw new Error("Já existe um financiamento cadastrado com este número de processo.");
     }
     if (!dados.dataInicio || !dados.dataFim || dados.dataFim <= dados.dataInicio) {
@@ -399,7 +457,7 @@ export const mockApi = {
     const novo: Financiamento = {
       idFinanciamento: proximoIdFinanciamento++,
       agenciaFinanciadora: dados.agenciaFinanciadora.trim(),
-      numeroProcesso: dados.numeroProcesso.trim(),
+      numeroProcesso: (dados.numeroProcesso ?? "").trim(),
       tipoFomento: dados.tipoFomento.trim(),
       valorTotal: dados.valorTotal,
       dataInicio: dados.dataInicio,
@@ -407,6 +465,34 @@ export const mockApi = {
     };
     catalogoFinanciamentos.unshift(novo);
     return atraso({ ...novo });
+  },
+
+  atualizarFinanciamento: async (id: number, dados: NovoFinanciamento) => {
+    const idx = catalogoFinanciamentos.findIndex((f) => f.idFinanciamento === id);
+    if (idx < 0) throw new Error("Financiamento não encontrado.");
+    if (!dados.dataInicio || !dados.dataFim || dados.dataFim <= dados.dataInicio) {
+      throw new Error("A data de fim da vigência deve ser posterior à data de início.");
+    }
+    if (dados.valorTotal <= 0) {
+      throw new Error("O valor total deve ser maior que zero.");
+    }
+
+    catalogoFinanciamentos[idx] = {
+      ...catalogoFinanciamentos[idx],
+      agenciaFinanciadora: dados.agenciaFinanciadora.trim(),
+      numeroProcesso: (dados.numeroProcesso ?? catalogoFinanciamentos[idx].numeroProcesso ?? "").trim(),
+      tipoFomento: dados.tipoFomento.trim(),
+      valorTotal: dados.valorTotal,
+      dataInicio: dados.dataInicio,
+      dataFim: dados.dataFim,
+    };
+    return atraso({ ...catalogoFinanciamentos[idx] });
+  },
+
+  excluirFinanciamento: async (id: number) => {
+    const idx = catalogoFinanciamentos.findIndex((f) => f.idFinanciamento === id);
+    if (idx >= 0) catalogoFinanciamentos.splice(idx, 1);
+    return atraso(undefined);
   },
 
   listarApoiosPorFinanciamento: (idFinanciamento: number) => {
@@ -523,12 +609,35 @@ export const mockApi = {
       tipo: dados.tipo.trim(),
       ano: dados.ano,
       meioDivulgacao: dados.meioDivulgacao.trim(),
-      projetoCodigo: null,
-      projetoTitulo: null,
+      projetoCodigo: dados.projetoCodigo ?? null,
+      projetoTitulo: dados.projetoCodigo ? tituloProjeto(dados.projetoCodigo) : null,
       autores: [],
     };
     catalogoProducoes.unshift(nova);
     return atraso({ ...nova, autores: [] });
+  },
+
+  atualizarProducao: async (id: number, dados: NovaProducao) => {
+    const idx = catalogoProducoes.findIndex((p) => p.id === id);
+    if (idx < 0) throw new Error("Produção científica não encontrada.");
+
+    const atual = catalogoProducoes[idx];
+    const projetoCodigo =
+      dados.projetoCodigo !== undefined ? dados.projetoCodigo : atual.projetoCodigo ?? null;
+
+    catalogoProducoes[idx] = {
+      ...atual,
+      titulo: dados.titulo.trim(),
+      tipo: dados.tipo.trim(),
+      ano: dados.ano,
+      meioDivulgacao: dados.meioDivulgacao.trim(),
+      projetoCodigo,
+      projetoTitulo: projetoCodigo ? tituloProjeto(projetoCodigo) : null,
+    };
+    return atraso({
+      ...catalogoProducoes[idx],
+      autores: catalogoProducoes[idx].autores.map((a) => ({ ...a })),
+    });
   },
 
   vincularProducao: async (payload: VincularProducaoPayload) => {
@@ -783,9 +892,11 @@ export const mockApi = {
         somaDist += dist;
         somaDisp += disp;
 
+        const procLabel = f.numeroProcesso || `#${f.idFinanciamento}`;
+
         linhasCsv.push([
           agencia,
-          f.numeroProcesso,
+          procLabel,
           f.tipoFomento,
           formatarData(f.dataInicio),
           formatarData(f.dataFim),
@@ -795,7 +906,7 @@ export const mockApi = {
         ]);
 
         return [
-          f.numeroProcesso,
+          procLabel,
           f.tipoFomento,
           `${formatarData(f.dataInicio)} a ${formatarData(f.dataFim)}`,
           formatarMoeda(f.valorTotal),

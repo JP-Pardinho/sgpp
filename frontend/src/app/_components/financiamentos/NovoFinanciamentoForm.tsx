@@ -56,14 +56,14 @@ export default function NovoFinanciamentoForm() {
   const processoDuplicado =
     processoTrim.length >= 3 &&
     existentes.some(
-      (f) => f.numeroProcesso.trim().toLowerCase() === processoTrim.toLowerCase(),
+      (f) => (f.numeroProcesso ?? "").trim().toLowerCase() === processoTrim.toLowerCase(),
     );
 
   let erroProcesso: string | null = null;
   if (processoDuplicado) {
     erroProcesso = "Já existe um financiamento cadastrado com este número de processo.";
-  } else if ((tocado.numeroProcesso || numeroProcesso.length > 0) && processoTrim.length < 3) {
-    erroProcesso = "Informe o número do processo (mínimo de 3 caracteres).";
+  } else if (processoTrim.length > 0 && processoTrim.length < 3) {
+    erroProcesso = "Informe pelo menos 3 caracteres para o número do processo.";
   }
 
   const valorNumero = parseMoedaInput(valorInput);
@@ -84,7 +84,7 @@ export default function NovoFinanciamentoForm() {
 
   const formularioValido =
     agenciaFinanciadora !== "" &&
-    processoTrim.length >= 3 &&
+    !erroProcesso &&
     !processoDuplicado &&
     tipoFomento !== "" &&
     valorNumero > 0 &&
@@ -183,12 +183,11 @@ export default function NovoFinanciamentoForm() {
 
           <div>
             <label htmlFor="numeroProcesso" className={rotulo}>
-              Número do processo
+              Número do processo (opcional)
             </label>
             <input
               id="numeroProcesso"
               type="text"
-              required
               maxLength={60}
               value={numeroProcesso}
               onChange={(e) => setNumeroProcesso(e.target.value)}
