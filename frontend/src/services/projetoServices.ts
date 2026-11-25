@@ -12,14 +12,14 @@ export interface Projeto {
   dataInicio: string;
   dataFim?: string | null;
   /** CPF do coordenador principal (coluna coordenador_cpf do schema.sql) */
-  coordenadorCpf?: string;
-  coordenadorNome?: string;
+  coordenador_cpf?: string;
+  coordenador_nome?: string;
 }
 
 export interface FiltrosProjeto {
   busca?: string;
   situacao?: string;
-  coordenadorCpf?: string;
+  coordenador_cpf?: string;
   pagina?: number;
   tamanhoPagina?: number;
 }
@@ -37,13 +37,13 @@ function normalizar(texto: string) {
 
 /** Filtros e paginação feitos no cliente (o back-end ainda devolve a lista inteira). */
 function aplicarFiltros(projetos: Projeto[], filtros: FiltrosProjeto): ResultadoPaginado<Projeto> {
-  const { busca = "", situacao = "", coordenadorCpf = "", pagina = 1, tamanhoPagina = 8 } = filtros;
+  const { busca = "", situacao = "", coordenador_cpf = "", pagina = 1, tamanhoPagina = 8 } = filtros;
   const termo = normalizar(busca.trim());
 
   const filtrados = projetos.filter((p) => {
     if (termo && !normalizar(`${p.codigo} ${p.titulo}`).includes(termo)) return false;
     if (situacao && p.situacao !== situacao) return false;
-    if (coordenadorCpf && p.coordenadorCpf !== coordenadorCpf) return false;
+    if (coordenador_cpf && p.coordenador_cpf !== coordenador_cpf) return false;
     return true;
   });
 

@@ -54,8 +54,8 @@ const projetos: Projeto[] = [
     situacao,
     dataInicio: ini,
     dataFim: fim,
-    coordenadorCpf: cpf,
-    coordenadorNome: nomeDe(cpf),
+    coordenador_cpf: cpf,
+    coordenador_nome: nomeDe(cpf),
   })),
   ...Array.from({ length: 16 }, (_, i): Projeto => {
     const cpf = participantes[i % 7].cpf;
@@ -66,8 +66,8 @@ const projetos: Projeto[] = [
       situacao: sits[i % sits.length],
       dataInicio: "2026-01-15",
       dataFim: `202${7 + (i % 2)}-0${1 + (i % 9)}-28`,
-      coordenadorCpf: cpf,
-      coordenadorNome: nomeDe(cpf),
+      coordenador_cpf: cpf,
+      coordenador_nome: nomeDe(cpf),
     };
   }),
 ];
@@ -113,7 +113,7 @@ export const mockApi = {
     if (projetos.some((p) => p.codigo === projeto.codigo)) {
       throw new Error("Já existe um projeto com este código.");
     }
-    const novo = { ...projeto, coordenadorNome: nomeDe(projeto.coordenadorCpf ?? "") };
+    const novo = { ...projeto, coordenador_nome: nomeDe(projeto.coordenador_cpf ?? "") };
     projetos.unshift(novo);
     return atraso(novo);
   },
@@ -121,7 +121,7 @@ export const mockApi = {
   atualizarProjeto: async (codigo: string, projeto: Projeto) => {
     const i = projetos.findIndex((p) => p.codigo === codigo);
     if (i < 0) throw new Error("Projeto não encontrado.");
-    projetos[i] = { ...projeto, coordenadorNome: nomeDe(projeto.coordenadorCpf ?? "") };
+    projetos[i] = { ...projeto, coordenador_nome: nomeDe(projeto.coordenador_cpf ?? "") };
     return atraso(projetos[i]);
   },
 
