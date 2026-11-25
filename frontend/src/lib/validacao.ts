@@ -50,3 +50,31 @@ export function validarEmailInstitucional(email: string): string | null {
   }
   return null;
 }
+
+/** Formata dígitos em centavos para moeda pt-BR sem símbolo (ex.: "15000000" -> "150.000,00"). */
+export function formatarMoedaInput(valor: string): string {
+  const digitos = somenteDigitos(valor);
+  if (!digitos) return "";
+  const numero = Number(digitos) / 100;
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Converte texto formatado em pt-BR ("150.000,00") para número (150000). */
+export function parseMoedaInput(valor: string): number {
+  const normalizado = valor.trim().replace(/\./g, "").replace(",", ".");
+  if (!normalizado) return 0;
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+/** Converte número (150000) em string formatada para input ("150.000,00"). */
+export function numeroParaMoedaInput(valor: number): string {
+  if (!Number.isFinite(valor) || valor <= 0) return "";
+  return valor.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}

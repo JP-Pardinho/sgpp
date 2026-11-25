@@ -115,6 +115,7 @@ export default function DetalhesProjeto() {
           <SecaoTabela
             titulo="Financiamentos e Fomento"
             textoBotao="Vincular financiamento"
+            hrefBotao={`/financiamentos/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
             colunas={["Agência", "Tipo de Fomento", "Vínculo", "Vigência", "Valor", "Ações"]}
             vazio="Nenhum financiamento vinculado."
             quantidade={dados.financiamentos.length}

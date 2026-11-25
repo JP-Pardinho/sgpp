@@ -2,6 +2,12 @@
 import type { Usuario } from "@/lib/session";
 import type { Dashboard } from "./dashboardServices";
 import type { LoginPayload, LoginResposta } from "./authService";
+import type {
+  ApoioFinanceiro,
+  Financiamento,
+  NovoFinanciamento,
+  VincularFinanciamentoPayload,
+} from "./financiamentoServices";
 import type { Participante } from "./participanteServices";
 import type { Projeto } from "./projetoServices";
 import type {
@@ -112,11 +118,56 @@ function obterOuCriarEquipe(codigo: string): EquipeMembro[] {
   return equipesPorProjeto[codigo];
 }
 
-const financiamentos: FinanciamentoVinculado[] = [
-  { idFinanciamento: 1, agencia: "CNPq", tipoFomento: "Bolsa", tipoVinculo: "Total", dataInicio: "2026-03-01", dataFim: "2028-02-28", valor: 48000 },
-  { idFinanciamento: 2, agencia: "FAPES", tipoFomento: "Auxílio Pesquisa", tipoVinculo: "Parcial", dataInicio: "2026-05-01", dataFim: "2027-04-30", valor: 25000 },
-  { idFinanciamento: 3, agencia: "CAPES", tipoFomento: "Apoio Financeiro", tipoVinculo: "Parcial", dataInicio: "2026-03-01", dataFim: "2028-02-28", valor: 12000 },
+const catalogoFinanciamentos: Financiamento[] = [
+  {
+    idFinanciamento: 1,
+    agenciaFinanciadora: "CNPq",
+    numeroProcesso: "402198/2026-4",
+    tipoFomento: "Bolsa",
+    valorTotal: 120_000,
+    dataInicio: "2026-03-01",
+    dataFim: "2028-02-28",
+  },
+  {
+    idFinanciamento: 2,
+    agenciaFinanciadora: "FAPES",
+    numeroProcesso: "2026-88412",
+    tipoFomento: "Auxílio Pesquisa",
+    valorTotal: 80_000,
+    dataInicio: "2026-05-01",
+    dataFim: "2027-04-30",
+  },
+  {
+    idFinanciamento: 3,
+    agenciaFinanciadora: "CAPES",
+    numeroProcesso: "88887.910234/2026-00",
+    tipoFomento: "Apoio Financeiro",
+    valorTotal: 60_000,
+    dataInicio: "2026-03-01",
+    dataFim: "2028-02-28",
+  },
+  {
+    idFinanciamento: 4,
+    agenciaFinanciadora: "CNPq",
+    numeroProcesso: "409876/2026-1",
+    tipoFomento: "Equipamentos",
+    valorTotal: 50_000,
+    dataInicio: "2026-06-01",
+    dataFim: "2028-05-31",
+  },
 ];
+
+let proximoIdFinanciamento = 5;
+
+const apoiosFinanceiros: ApoioFinanceiro[] = [
+  { idFinanciamento: 1, projetoCodigo: "PRJ-2026-014", tipoVinculo: "Parcial", valorDestinado: 48_000 },
+  { idFinanciamento: 1, projetoCodigo: "PRJ-2026-016", tipoVinculo: "Parcial", valorDestinado: 36_000 },
+  { idFinanciamento: 2, projetoCodigo: "PRJ-2026-014", tipoVinculo: "Parcial", valorDestinado: 25_000 },
+  { idFinanciamento: 3, projetoCodigo: "PRJ-2026-014", tipoVinculo: "Parcial", valorDestinado: 12_000 },
+];
+
+const tituloProjeto = (codigo: string) =>
+  projetos.find((p) => p.codigo === codigo)?.titulo ?? codigo;
 
 const producoes: ProducaoVinculada[] = [
   { id: 1, titulo: "Impacto das cheias na qualidade da água do Rio Cricaré", tipo: "Artigo", ano: 2026, meioDivulgacao: "Revista Brasileira de Recursos Hídricos" },
@@ -251,7 +302,126 @@ export const mockApi = {
     if (idx >= 0) lista.splice(idx, 1);
     return atraso(undefined);
   },
-  listarFinanciamentos: () => atraso([...financiamentos]),
+  listarFinanciamentos: (codigo = "PRJ-2026-014"): Promise<FinanciamentoVinculado[]> => {
+    const lista = apoiosFinanceiros
+      .filter((a) => a.projetoCodigo === codigo)
+      .map((a): FinanciamentoVinculado | null => {
+        const fin = catalogoFinanciamentos.find((f) => f.idFinanciamento === a.idFinanciamento);
+        if (!fin) return null;
+        return {
+          idFinanciamento: fin.idFinanciamento,
+          agencia: fin.agenciaFinanciadora,
+          tipoFomento: fin.tipoFomento,
+          tipoVinculo: a.tipoVinculo,
+          dataInicio: fin.dataInicio,
+          dataFim: fin.dataFim,
+          valor: a.valorDestinado,
+        };
+      })
+      .filter((item): item is FinanciamentoVinculado => item !== null);
+    return atraso(lista);
+  },
+
+  listarCatalogoFinanciamentos: () =>
+    atraso(catalogoFinanciamentos.map((f) => ({ ...f }))),
+
+  buscarFinanciamento: async (id: number) => {
+    const fin = catalogoFinanciamentos.find((f) => f.idFinanciamento === id);
+    if (!fin) throw new Error("Financiamento não encontrado.");
+    return atraso({ ...fin });
+  },
+
+  criarFinanciamento: async (dados: NovoFinanciamento) => {
+    const processoNorm = dados.numeroProcesso.trim().toLowerCase();
+    if (catalogoFinanciamentos.some((f) => f.numeroProcesso.trim().toLowerCase() === processoNorm)) {
+      throw new Error("Já existe um financiamento cadastrado com este número de processo.");
+    }
+    if (!dados.dataInicio || !dados.dataFim || dados.dataFim <= dados.dataInicio) {
+      throw new Error("A data de fim da vigência deve ser posterior à data de início.");
+    }
+    if (dados.valorTotal <= 0) {
+      throw new Error("O valor total deve ser maior que zero.");
+    }
+
+    const novo: Financiamento = {
+      idFinanciamento: proximoIdFinanciamento++,
+      agenciaFinanciadora: dados.agenciaFinanciadora.trim(),
+      numeroProcesso: dados.numeroProcesso.trim(),
+      tipoFomento: dados.tipoFomento.trim(),
+      valorTotal: dados.valorTotal,
+      dataInicio: dados.dataInicio,
+      dataFim: dados.dataFim,
+    };
+    catalogoFinanciamentos.unshift(novo);
+    return atraso({ ...novo });
+  },
+
+  listarApoiosPorFinanciamento: (idFinanciamento: number) => {
+    const lista = apoiosFinanceiros
+      .filter((a) => a.idFinanciamento === idFinanciamento)
+      .map((a) => ({
+        ...a,
+        projetoTitulo: tituloProjeto(a.projetoCodigo),
+      }));
+    return atraso(lista, 120);
+  },
+
+  listarTodosApoios: () =>
+    atraso(
+      apoiosFinanceiros.map((a) => ({
+        ...a,
+        projetoTitulo: tituloProjeto(a.projetoCodigo),
+      })),
+      100,
+    ),
+
+  vincularFinanciamentoProjeto: async (payload: VincularFinanciamentoPayload) => {
+    const fin = catalogoFinanciamentos.find((f) => f.idFinanciamento === payload.idFinanciamento);
+    if (!fin) throw new Error("Financiamento não encontrado.");
+
+    const apoiosDoFinanciamento = apoiosFinanceiros.filter(
+      (a) => a.idFinanciamento === payload.idFinanciamento,
+    );
+
+    if (apoiosDoFinanciamento.some((a) => a.projetoCodigo === payload.projetoCodigo)) {
+      throw new Error("Este projeto já está vinculado a este financiamento.");
+    }
+
+    const valorDistribuido = apoiosDoFinanciamento.reduce((acc, a) => acc + a.valorDestinado, 0);
+    const saldoDisponivel = Math.max(0, fin.valorTotal - valorDistribuido);
+
+    if (payload.tipoVinculo === "Total" && valorDistribuido > 0) {
+      throw new Error(
+        "Não é possível usar vínculo Total quando o financiamento já possui valores distribuídos.",
+      );
+    }
+
+    const valorFinal = payload.tipoVinculo === "Total" ? fin.valorTotal : payload.valorDestinado;
+    if (valorFinal <= 0) {
+      throw new Error("O valor destinado deve ser maior que zero.");
+    }
+    if (valorFinal > saldoDisponivel + 0.001) {
+      throw new Error("O valor destinado excede o saldo disponível do financiamento.");
+    }
+
+    const novo: ApoioFinanceiro = {
+      idFinanciamento: payload.idFinanciamento,
+      projetoCodigo: payload.projetoCodigo,
+      projetoTitulo: tituloProjeto(payload.projetoCodigo),
+      tipoVinculo: payload.tipoVinculo,
+      valorDestinado: valorFinal,
+    };
+    apoiosFinanceiros.push(novo);
+    return atraso({ ...novo });
+  },
+
+  removerVinculoFinanciamento: async (idFinanciamento: number, projetoCodigo: string) => {
+    const idx = apoiosFinanceiros.findIndex(
+      (a) => a.idFinanciamento === idFinanciamento && a.projetoCodigo === projetoCodigo,
+    );
+    if (idx >= 0) apoiosFinanceiros.splice(idx, 1);
+    return atraso(undefined);
+  },
   listarProducoes: () => atraso([...producoes]),
 
   dashboard: (): Promise<Dashboard> => {

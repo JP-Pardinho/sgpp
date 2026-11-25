@@ -69,7 +69,7 @@ export const vinculosService = {
 
   listarFinanciamentos: (codigo: string) =>
     USE_MOCK
-      ? mockApi.listarFinanciamentos()
+      ? mockApi.listarFinanciamentos(codigo)
       : apiFetch<FinanciamentoVinculado[]>(`${base(codigo)}/financiamentos`),
 
   listarProducoes: (codigo: string) =>
