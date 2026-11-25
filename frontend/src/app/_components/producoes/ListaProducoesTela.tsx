@@ -63,8 +63,10 @@ export default function ListaProducoesTela() {
     try {
       await producoesService.excluir(p.id);
       setProducoes((prev) => prev.filter((item) => item.id !== p.id));
-    } catch {
-      setErro("Não foi possível excluir a produção científica.");
+    } catch (err) {
+      setErro(
+        err instanceof Error ? err.message : "Não foi possível excluir a produção científica.",
+      );
     } finally {
       setExcluindoId(null);
     }

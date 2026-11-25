@@ -219,7 +219,7 @@ function VincularFinanciamentoInterna({
     if (!financiamentoSelecionado) return;
     if (
       !window.confirm(
-        `Remover o vínculo do financiamento ${financiamentoSelecionado.numeroProcesso} com o projeto ${apoio.projetoCodigo}?`,
+        `Remover o vínculo do financiamento ${financiamentoSelecionado.numeroProcesso || `#${financiamentoSelecionado.idFinanciamento}`} com o projeto ${apoio.projetoCodigo}?`,
       )
     ) {
       return;
@@ -306,8 +306,9 @@ function VincularFinanciamentoInterna({
                 </option>
                 {financiamentos.map((f) => (
                   <option key={f.idFinanciamento} value={String(f.idFinanciamento)}>
-                    {f.agenciaFinanciadora} · Proc. {f.numeroProcesso} ({f.tipoFomento} —{" "}
-                    {formatarMoeda(f.valorTotal)})
+                    {f.agenciaFinanciadora} ·{" "}
+                    {f.numeroProcesso ? `Proc. ${f.numeroProcesso}` : `#${f.idFinanciamento}`} (
+                    {f.tipoFomento} — {formatarMoeda(f.valorTotal)})
                   </option>
                 ))}
               </select>
@@ -470,7 +471,11 @@ function VincularFinanciamentoInterna({
                   {financiamentoSelecionado.agenciaFinanciadora} —{" "}
                   {financiamentoSelecionado.tipoFomento}
                 </p>
-                <p className="mt-0.5">Proc. {financiamentoSelecionado.numeroProcesso}</p>
+                <p className="mt-0.5">
+                  {financiamentoSelecionado.numeroProcesso
+                    ? `Proc. ${financiamentoSelecionado.numeroProcesso}`
+                    : `Financiamento #${financiamentoSelecionado.idFinanciamento}`}
+                </p>
                 <p className="mt-0.5">
                   Vigência: {formatarData(financiamentoSelecionado.dataInicio)} a{" "}
                   {formatarData(financiamentoSelecionado.dataFim)}
@@ -540,8 +545,10 @@ function VincularFinanciamentoInterna({
             </h2>
             {financiamentoSelecionado && (
               <p className="text-sm text-slate-500">
-                {financiamentoSelecionado.agenciaFinanciadora} · Proc.{" "}
-                {financiamentoSelecionado.numeroProcesso}
+                {financiamentoSelecionado.agenciaFinanciadora} ·{" "}
+                {financiamentoSelecionado.numeroProcesso
+                  ? `Proc. ${financiamentoSelecionado.numeroProcesso}`
+                  : `#${financiamentoSelecionado.idFinanciamento}`}
               </p>
             )}
           </div>

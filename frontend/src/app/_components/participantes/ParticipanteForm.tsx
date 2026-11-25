@@ -51,7 +51,7 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
     emailTrim.length > 0 &&
     !erroFormatoEmail &&
     participantesExistentes.some(
-      (p) => (p.email ?? "").trim().toLowerCase() === emailTrim.toLowerCase(),
+      (p) => (p.emailInstitucional ?? "").trim().toLowerCase() === emailTrim.toLowerCase(),
     );
   const erroEmail =
     erroFormatoEmail ?? (emailJaExiste ? "Este e-mail institucional já está cadastrado." : null);
@@ -102,7 +102,7 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
     try {
       const novo = await participantesService.criar({
         nome: nomeTrim,
-        email: emailTrim,
+        emailInstitucional: emailTrim,
         cpf: formatarCpf(cpfDigitos),
         tipo,
       });

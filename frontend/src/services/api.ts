@@ -32,10 +32,26 @@ export async function apiFetch<T>(endpoint: string, options?: RequestInit): Prom
       limparSessao();
       window.location.href = "/login";
     }
-    throw new ApiError(
-      response.status,
-      `Erro na requisição (${response.status}): ${response.statusText}`,
-    );
+
+    let mensagem = `Erro na requisição (${response.status}): ${response.statusText}`;
+    try {
+      const corpo = (await response.json()) as {
+        mensagem?: string;
+        message?: string;
+        title?: string;
+      };
+      if (corpo?.mensagem) {
+        mensagem = corpo.mensagem;
+      } else if (corpo?.message) {
+        mensagem = corpo.message;
+      } else if (corpo?.title) {
+        mensagem = corpo.title;
+      }
+    } catch {
+      // Mantém a mensagem padrão caso a resposta não seja JSON.
+    }
+
+    throw new ApiError(response.status, mensagem);
   }
 
   if (response.status === 204) {

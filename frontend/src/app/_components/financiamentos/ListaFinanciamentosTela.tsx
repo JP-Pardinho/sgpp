@@ -28,7 +28,10 @@ export default function ListaFinanciamentosTela() {
 
   useEffect(() => {
     let ativo = true;
-    Promise.all([financiamentosService.listar(), financiamentosService.listarTodosApoios()])
+    Promise.all([
+      financiamentosService.listar(),
+      financiamentosService.listarTodosApoios().catch(() => [] as ApoioFinanceiro[]),
+    ])
       .then(([listaFin, listaApoios]) => {
         if (!ativo) return;
         setFinanciamentos(listaFin);
@@ -60,9 +63,9 @@ export default function ListaFinanciamentosTela() {
     return financiamentos.filter((f) => {
       if (agenciaFiltro && f.agenciaFinanciadora !== agenciaFiltro) return false;
       if (!termo) return true;
-      return normalizar(`${f.agenciaFinanciadora} ${f.numeroProcesso} ${f.tipoFomento}`).includes(
-        termo,
-      );
+      return normalizar(
+        `${f.agenciaFinanciadora} ${f.numeroProcesso ?? ""} #${f.idFinanciamento} ${f.tipoFomento}`,
+      ).includes(termo);
     });
   }, [financiamentos, busca, agenciaFiltro]);
 
@@ -175,7 +178,7 @@ export default function ListaFinanciamentosTela() {
                           {f.agenciaFinanciadora}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">
-                          {f.numeroProcesso}
+                          {f.numeroProcesso || `#${f.idFinanciamento}`}
                         </td>
                         <td className="px-3 py-2.5 text-slate-700">{f.tipoFomento}</td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">

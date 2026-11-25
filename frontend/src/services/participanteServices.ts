@@ -4,30 +4,45 @@ import { mockApi } from "./mock";
 export type TipoParticipante = "Docente" | "Discente" | "Técnico";
 export const TIPOS_PARTICIPANTE: TipoParticipante[] = ["Docente", "Discente", "Técnico"];
 
+export type PerfilAcesso = "Administrador" | "Coordenador" | "Participante";
+
 export interface Participante {
   cpf: string;
   nome: string;
-  email?: string;
-  tipo: string; // Docente | Discente | Técnico ...
+  emailInstitucional: string;
+  tipo: string; // Docente | Discente | Técnico
+  perfilAcesso?: string;
 }
 
 export interface NovoParticipante {
   nome: string;
-  email: string;
+  emailInstitucional: string;
   cpf: string;
   tipo: TipoParticipante;
+  perfilAcesso?: PerfilAcesso;
+  senhaHash?: string;
 }
 
-async function listar(): Promise<Participante[]> {
-  return USE_MOCK ? mockApi.listarParticipantes() : apiFetch<Participante[]>("/participantes");
+export interface AtualizarParticipante {
+  nome: string;
+  emailInstitucional: string;
+  tipo: TipoParticipante;
+  perfilAcesso?: PerfilAcesso;
+}
+
+async function listar(tipo?: string): Promise<Participante[]> {
+  if (USE_MOCK) {
+    return mockApi.listarParticipantes(tipo);
+  }
+  const query = tipo ? `?tipo=${encodeURIComponent(tipo)}` : "";
+  return apiFetch<Participante[]>(`/participantes${query}`);
 }
 
 export const participantesService = {
   listar,
 
   /** Usado no seletor de "Coordenador principal". */
-  listarDocentes: async () =>
-    (await listar()).filter((p) => p.tipo.toLowerCase() === "docente"),
+  listarDocentes: (): Promise<Participante[]> => listar("Docente"),
 
   buscarPorCpf: (cpf: string): Promise<Participante> =>
     USE_MOCK
@@ -39,6 +54,14 @@ export const participantesService = {
       ? mockApi.criarParticipante(participante)
       : apiFetch<Participante>("/participantes", {
           method: "POST",
+          body: JSON.stringify(participante),
+        }),
+
+  atualizar: (cpf: string, participante: AtualizarParticipante): Promise<Participante> =>
+    USE_MOCK
+      ? mockApi.atualizarParticipante(cpf, participante)
+      : apiFetch<Participante>(`/participantes/${encodeURIComponent(cpf)}`, {
+          method: "PUT",
           body: JSON.stringify(participante),
         }),
 
