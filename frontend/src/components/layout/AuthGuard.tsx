@@ -20,11 +20,24 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     if (sessao === null) router.replace("/login");
   }, [sessao, router]);
 
-  if (!sessao) {
+  if (sessao === null) {
     return (
       <div className="grid min-h-screen place-items-center text-sm text-slate-500">
         Carregando...
       </div>
+    );
+  }
+
+  if (sessao === undefined) {
+    return (
+      <UsuarioContext.Provider value={null}>
+        <div className="grid min-h-screen place-items-center text-sm text-slate-500">
+          Carregando...
+        </div>
+        <div className="hidden" aria-hidden="true">
+          {children}
+        </div>
+      </UsuarioContext.Provider>
     );
   }
 

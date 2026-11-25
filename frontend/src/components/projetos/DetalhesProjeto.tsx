@@ -136,6 +136,7 @@ export default function DetalhesProjeto() {
           <SecaoTabela
             titulo="Produções Científicas"
             textoBotao="Vincular produção"
+            hrefBotao={`/producoes/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
             colunas={["Título da Produção", "Tipo", "Ano", "Meio de Divulgação", "Ações"]}
             vazio="Nenhuma produção científica vinculada."
             quantidade={dados.producoes.length}

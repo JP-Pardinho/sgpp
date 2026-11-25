@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Suspense } from "react";
 import Icon, { type NomeIcone } from "@/components/ui/Icon";
 import { limparSessao } from "@/lib/session";
 
@@ -14,8 +15,36 @@ const ITENS: { rotulo: string; href: string; icone: NomeIcone }[] = [
   { rotulo: "Consultas", href: "/consultas", icone: "search" },
 ];
 
-export default function Sidebar() {
+function ListaLinks({ pathname }: { pathname: string | null }) {
+  return (
+    <nav className="flex-1 space-y-1 px-3 pt-2">
+      {ITENS.map((item) => {
+        const ativo =
+          pathname !== null &&
+          (pathname === item.href || pathname.startsWith(`${item.href}/`));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              ativo ? "bg-sgpp-800 font-medium" : "text-slate-300 hover:bg-white/10"
+            }`}
+          >
+            <Icon nome={item.icone} />
+            {item.rotulo}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function NavegacaoSidebar() {
   const pathname = usePathname();
+  return <ListaLinks pathname={pathname} />;
+}
+
+export default function Sidebar() {
   const router = useRouter();
 
   function sair() {
@@ -30,23 +59,9 @@ export default function Sidebar() {
         <p className="text-[11px] leading-tight text-slate-300">Univ. Fed. do Espírito Santo</p>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 pt-2">
-        {ITENS.map((item) => {
-          const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                ativo ? "bg-sgpp-800 font-medium" : "text-slate-300 hover:bg-white/10"
-              }`}
-            >
-              <Icon nome={item.icone} />
-              {item.rotulo}
-            </Link>
-          );
-        })}
-      </nav>
+      <Suspense fallback={<ListaLinks pathname={null} />}>
+        <NavegacaoSidebar />
+      </Suspense>
 
       <div className="border-t border-white/10 p-3">
         <button

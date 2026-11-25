@@ -1,7 +1,10 @@
 // Dados de exemplo para trabalhar o front sem o back-end (NEXT_PUBLIC_USE_MOCK=true).
+import { formatarData, formatarMoeda } from "@/lib/format";
+import { formatarCpf } from "@/lib/validacao";
 import type { Usuario } from "@/lib/session";
 import type { Dashboard } from "./dashboardServices";
 import type { LoginPayload, LoginResposta } from "./authService";
+import type { GrupoConsulta, ResultadoConsulta, TipoConsulta } from "./consultaServices";
 import type {
   ApoioFinanceiro,
   Financiamento,
@@ -9,6 +12,12 @@ import type {
   VincularFinanciamentoPayload,
 } from "./financiamentoServices";
 import type { Participante } from "./participanteServices";
+import type {
+  AutorProducao,
+  NovaProducao,
+  ProducaoCientifica,
+  VincularProducaoPayload,
+} from "./producaoServices";
 import type { Projeto } from "./projetoServices";
 import type {
   EquipeMembro,
@@ -169,11 +178,55 @@ const apoiosFinanceiros: ApoioFinanceiro[] = [
 const tituloProjeto = (codigo: string) =>
   projetos.find((p) => p.codigo === codigo)?.titulo ?? codigo;
 
-const producoes: ProducaoVinculada[] = [
-  { id: 1, titulo: "Impacto das cheias na qualidade da água do Rio Cricaré", tipo: "Artigo", ano: 2026, meioDivulgacao: "Revista Brasileira de Recursos Hídricos" },
-  { id: 2, titulo: "Análise microbiológica de sedimentos no estuário do Cricaré", tipo: "Artigo", ano: 2026, meioDivulgacao: "Congresso Brasileiro de Oceanografia" },
-  { id: 3, titulo: "Protocolo de coleta e monitoramento participativo de rios", tipo: "Relatório Técnico", ano: 2026, meioDivulgacao: "Repositório Institucional UFES" },
+const autorDe = (cpf: string): AutorProducao => {
+  const p = participantes.find((item) => item.cpf === cpf);
+  return {
+    cpf: p?.cpf ?? cpf,
+    nome: p?.nome ?? "Pesquisador",
+    tipo: p?.tipo ?? "Docente",
+  };
+};
+
+const catalogoProducoes: ProducaoCientifica[] = [
+  {
+    id: 1,
+    titulo: "Impacto das cheias na qualidade da água do Rio Cricaré",
+    tipo: "Artigo",
+    ano: 2026,
+    meioDivulgacao: "Revista",
+    projetoCodigo: "PRJ-2026-014",
+    autores: [autorDe("111.111.111-11"), autorDe("888.888.888-88")],
+  },
+  {
+    id: 2,
+    titulo: "Análise microbiológica de sedimentos no estuário do Cricaré",
+    tipo: "Artigo",
+    ano: 2026,
+    meioDivulgacao: "Congresso",
+    projetoCodigo: "PRJ-2026-014",
+    autores: [autorDe("111.111.111-11"), autorDe("999.999.999-99")],
+  },
+  {
+    id: 3,
+    titulo: "Protocolo de coleta e monitoramento participativo de rios",
+    tipo: "Relatório técnico",
+    ano: 2026,
+    meioDivulgacao: "Repositório",
+    projetoCodigo: "PRJ-2026-014",
+    autores: [autorDe("111.111.111-11")],
+  },
+  {
+    id: 4,
+    titulo: "Sistema de Monitoramento Hidrológico OpenData",
+    tipo: "Software",
+    ano: 2026,
+    meioDivulgacao: "Repositório",
+    projetoCodigo: null,
+    autores: [],
+  },
 ];
+
+let proximoIdProducao = 5;
 
 export const mockApi = {
   login: ({ email, senha }: LoginPayload): Promise<LoginResposta> => {
@@ -422,7 +475,359 @@ export const mockApi = {
     if (idx >= 0) apoiosFinanceiros.splice(idx, 1);
     return atraso(undefined);
   },
-  listarProducoes: () => atraso([...producoes]),
+  listarProducoes: (codigo = "PRJ-2026-014"): Promise<ProducaoVinculada[]> =>
+    atraso(
+      catalogoProducoes
+        .filter((p) => p.projetoCodigo === codigo)
+        .map((p) => ({
+          id: p.id,
+          titulo: p.titulo,
+          tipo: p.tipo,
+          ano: p.ano,
+          meioDivulgacao: p.meioDivulgacao,
+        })),
+    ),
+
+  listarCatalogoProducoes: () =>
+    atraso(
+      catalogoProducoes.map((p) => ({
+        ...p,
+        projetoTitulo: p.projetoCodigo ? tituloProjeto(p.projetoCodigo) : null,
+        autores: p.autores.map((a) => ({ ...a })),
+      })),
+    ),
+
+  buscarProducao: async (id: number) => {
+    const prod = catalogoProducoes.find((p) => p.id === id);
+    if (!prod) throw new Error("Produção científica não encontrada.");
+    return atraso({
+      ...prod,
+      projetoTitulo: prod.projetoCodigo ? tituloProjeto(prod.projetoCodigo) : null,
+      autores: prod.autores.map((a) => ({ ...a })),
+    });
+  },
+
+  criarProducao: async (dados: NovaProducao) => {
+    const tituloNorm = dados.titulo.trim().toLowerCase();
+    if (
+      catalogoProducoes.some(
+        (p) => p.titulo.trim().toLowerCase() === tituloNorm && p.ano === dados.ano,
+      )
+    ) {
+      throw new Error("Já existe uma produção científica com este título neste ano.");
+    }
+
+    const nova: ProducaoCientifica = {
+      id: proximoIdProducao++,
+      titulo: dados.titulo.trim(),
+      tipo: dados.tipo.trim(),
+      ano: dados.ano,
+      meioDivulgacao: dados.meioDivulgacao.trim(),
+      projetoCodigo: null,
+      projetoTitulo: null,
+      autores: [],
+    };
+    catalogoProducoes.unshift(nova);
+    return atraso({ ...nova, autores: [] });
+  },
+
+  vincularProducao: async (payload: VincularProducaoPayload) => {
+    const prod = catalogoProducoes.find((p) => p.id === payload.producaoId);
+    if (!prod) throw new Error("Produção científica não encontrada.");
+
+    const projeto = projetos.find((p) => p.codigo === payload.projetoCodigo);
+    if (!projeto) throw new Error("Projeto selecionado não encontrado.");
+
+    // RN04: autores devem ser participantes previamente cadastrados
+    const autoresUnicos: AutorProducao[] = [];
+    const vistos = new Set<string>();
+    for (const cpf of payload.autoresCpfs) {
+      const digitos = cpf.replace(/\D/g, "");
+      if (vistos.has(digitos)) continue;
+      const participante = participantes.find((p) => p.cpf.replace(/\D/g, "") === digitos);
+      if (!participante) {
+        throw new Error(
+          "RN04: Todos os autores devem estar previamente cadastrados como participantes.",
+        );
+      }
+      vistos.add(digitos);
+      autoresUnicos.push({
+        cpf: participante.cpf,
+        nome: participante.nome,
+        tipo: participante.tipo,
+      });
+    }
+
+    if (autoresUnicos.length === 0) {
+      throw new Error("Selecione pelo menos um autor cadastrado.");
+    }
+
+    prod.projetoCodigo = projeto.codigo;
+    prod.projetoTitulo = projeto.titulo;
+    prod.autores = autoresUnicos;
+
+    return atraso({
+      ...prod,
+      autores: autoresUnicos.map((a) => ({ ...a })),
+    });
+  },
+
+  excluirProducao: async (id: number) => {
+    const idx = catalogoProducoes.findIndex((p) => p.id === id);
+    if (idx >= 0) catalogoProducoes.splice(idx, 1);
+    return atraso(undefined);
+  },
+
+  executarConsulta: async (tipo: TipoConsulta, filtro = ""): Promise<ResultadoConsulta> => {
+    const filtroLimpo = filtro.trim();
+
+    if (tipo === "projetos-por-coordenador") {
+      const filtroDigitos = filtroLimpo.replace(/\D/g, "");
+      const filtrados = filtroDigitos
+        ? projetos.filter((p) => (p.coordenadorCpf ?? "").replace(/\D/g, "") === filtroDigitos)
+        : projetos;
+
+      const mapa = new Map<string, Projeto[]>();
+      for (const p of filtrados) {
+        const chave = p.coordenadorCpf ?? "sem-coordenador";
+        const lista = mapa.get(chave) ?? [];
+        lista.push(p);
+        mapa.set(chave, lista);
+      }
+
+      const grupos: GrupoConsulta[] = Array.from(mapa.entries()).map(([cpf, lista]) => {
+        const nome = lista[0]?.coordenadorNome || nomeDe(cpf) || "Coordenador não informado";
+        const emAndamento = lista.filter((p) => p.situacao === "Em andamento").length;
+        return {
+          chave: cpf,
+          titulo: nome,
+          subtitulo: cpf !== "sem-coordenador" ? `CPF: ${formatarCpf(cpf)}` : undefined,
+          colunas: ["Código", "Título do projeto", "Situação", "Início", "Término"],
+          linhas: lista.map((p) => [
+            p.codigo,
+            p.titulo,
+            p.situacao,
+            formatarData(p.dataInicio),
+            formatarData(p.dataFim),
+          ]),
+          subtotalLabel: "Subtotal de projetos do coordenador",
+          subtotalValor: `${lista.length} ${lista.length === 1 ? "projeto" : "projetos"} (${emAndamento} em andamento)`,
+        };
+      });
+
+      const linhasCsv = filtrados.map((p) => [
+        p.coordenadorNome || nomeDe(p.coordenadorCpf ?? "") || "-",
+        formatarCpf(p.coordenadorCpf ?? ""),
+        p.codigo,
+        p.titulo,
+        p.situacao,
+        formatarData(p.dataInicio),
+        formatarData(p.dataFim),
+      ]);
+
+      return atraso({
+        tipo,
+        tituloRelatorio: "Projetos por Coordenador (UC09)",
+        filtroAplicado: filtroLimpo
+          ? `Coordenador: ${nomeDe(filtroLimpo) || formatarCpf(filtroLimpo)}`
+          : "Todos os docentes",
+        colunasCsv: ["Coordenador", "CPF", "Código", "Título do projeto", "Situação", "Início", "Término"],
+        linhasCsv,
+        grupos,
+        totalRegistros: filtrados.length,
+        resumoGeral: `${grupos.length} ${grupos.length === 1 ? "coordenador" : "coordenadores"} · ${filtrados.length} ${filtrados.length === 1 ? "projeto" : "projetos"}`,
+      });
+    }
+
+    if (tipo === "participantes-do-projeto") {
+      const projetosAlvo = filtroLimpo
+        ? projetos.filter((p) => p.codigo === filtroLimpo)
+        : projetos;
+
+      const grupos: GrupoConsulta[] = [];
+      const linhasCsv: string[][] = [];
+      let totalRegistros = 0;
+
+      for (const proj of projetosAlvo) {
+        const equipeProj = obterOuCriarEquipe(proj.codigo);
+        if (!filtroLimpo && equipeProj.length === 0) continue;
+
+        totalRegistros += equipeProj.length;
+        grupos.push({
+          chave: proj.codigo,
+          titulo: `${proj.codigo} — ${proj.titulo}`,
+          subtitulo: `Situação: ${proj.situacao} · Coordenador: ${proj.coordenadorNome ?? "-"}`,
+          colunas: ["Participante", "CPF", "Tipo", "Função", "Entrada", "Saída"],
+          linhas: equipeProj.map((m) => [
+            m.nome,
+            formatarCpf(m.cpf),
+            m.tipo,
+            m.funcao,
+            formatarData(m.dataEntrada),
+            formatarData(m.dataSaida),
+          ]),
+          subtotalLabel: "Subtotal de participantes no projeto",
+          subtotalValor: `${equipeProj.length} ${equipeProj.length === 1 ? "participante" : "participantes"}`,
+        });
+
+        for (const m of equipeProj) {
+          linhasCsv.push([
+            proj.codigo,
+            proj.titulo,
+            m.nome,
+            formatarCpf(m.cpf),
+            m.tipo,
+            m.funcao,
+            formatarData(m.dataEntrada),
+            formatarData(m.dataSaida),
+          ]);
+        }
+      }
+
+      return atraso({
+        tipo,
+        tituloRelatorio: "Participantes do Projeto (UC10)",
+        filtroAplicado: filtroLimpo
+          ? `Projeto: ${filtroLimpo} — ${tituloProjeto(filtroLimpo)}`
+          : "Todos os projetos",
+        colunasCsv: ["Código do projeto", "Título do projeto", "Participante", "CPF", "Tipo", "Função", "Entrada", "Saída"],
+        linhasCsv,
+        grupos,
+        totalRegistros,
+        resumoGeral: `${grupos.length} ${grupos.length === 1 ? "projeto" : "projetos"} · ${totalRegistros} ${totalRegistros === 1 ? "vínculo" : "vínculos"}`,
+      });
+    }
+
+    if (tipo === "producoes-do-projeto") {
+      const filtradas = catalogoProducoes.filter((p) => {
+        if (!p.projetoCodigo) return false;
+        if (filtroLimpo && p.projetoCodigo !== filtroLimpo) return false;
+        return true;
+      });
+
+      const mapa = new Map<string, ProducaoCientifica[]>();
+      for (const prod of filtradas) {
+        const codigo = prod.projetoCodigo!;
+        const lista = mapa.get(codigo) ?? [];
+        lista.push(prod);
+        mapa.set(codigo, lista);
+      }
+
+      const grupos: GrupoConsulta[] = Array.from(mapa.entries()).map(([codigo, lista]) => ({
+        chave: codigo,
+        titulo: `${codigo} — ${tituloProjeto(codigo)}`,
+        subtitulo: "Produções científicas vinculadas ao projeto",
+        colunas: ["Título da produção", "Tipo", "Ano", "Meio de divulgação", "Autores"],
+        linhas: lista.map((prod) => [
+          prod.titulo,
+          prod.tipo,
+          String(prod.ano),
+          prod.meioDivulgacao,
+          prod.autores.map((a) => a.nome).join(", ") || "-",
+        ]),
+        subtotalLabel: "Subtotal de produções do projeto",
+        subtotalValor: `${lista.length} ${lista.length === 1 ? "produção" : "produções"}`,
+      }));
+
+      const linhasCsv = filtradas.map((prod) => [
+        prod.projetoCodigo ?? "-",
+        prod.projetoCodigo ? tituloProjeto(prod.projetoCodigo) : "-",
+        prod.titulo,
+        prod.tipo,
+        String(prod.ano),
+        prod.meioDivulgacao,
+        prod.autores.map((a) => a.nome).join(", ") || "-",
+      ]);
+
+      return atraso({
+        tipo,
+        tituloRelatorio: "Produções do Projeto (UC11)",
+        filtroAplicado: filtroLimpo
+          ? `Projeto: ${filtroLimpo} — ${tituloProjeto(filtroLimpo)}`
+          : "Todos os projetos com produções",
+        colunasCsv: ["Código do projeto", "Título do projeto", "Título da produção", "Tipo", "Ano", "Meio de divulgação", "Autores"],
+        linhasCsv,
+        grupos,
+        totalRegistros: filtradas.length,
+        resumoGeral: `${grupos.length} ${grupos.length === 1 ? "projeto" : "projetos"} · ${filtradas.length} ${filtradas.length === 1 ? "produção" : "produções"}`,
+      });
+    }
+
+    // UC12: financiamentos-por-agencia
+    const filtrados = filtroLimpo
+      ? catalogoFinanciamentos.filter((f) => f.agenciaFinanciadora === filtroLimpo)
+      : catalogoFinanciamentos;
+
+    const mapa = new Map<string, Financiamento[]>();
+    for (const fin of filtrados) {
+      const lista = mapa.get(fin.agenciaFinanciadora) ?? [];
+      lista.push(fin);
+      mapa.set(fin.agenciaFinanciadora, lista);
+    }
+
+    let somaGeralTotal = 0;
+    const linhasCsv: string[][] = [];
+
+    const grupos: GrupoConsulta[] = Array.from(mapa.entries()).map(([agencia, lista]) => {
+      let somaTotal = 0;
+      let somaDist = 0;
+      let somaDisp = 0;
+
+      const linhas = lista.map((f) => {
+        const dist = apoiosFinanceiros
+          .filter((a) => a.idFinanciamento === f.idFinanciamento)
+          .reduce((acc, a) => acc + a.valorDestinado, 0);
+        const disp = Math.max(0, f.valorTotal - dist);
+
+        somaTotal += f.valorTotal;
+        somaDist += dist;
+        somaDisp += disp;
+
+        linhasCsv.push([
+          agencia,
+          f.numeroProcesso,
+          f.tipoFomento,
+          formatarData(f.dataInicio),
+          formatarData(f.dataFim),
+          formatarMoeda(f.valorTotal),
+          formatarMoeda(dist),
+          formatarMoeda(disp),
+        ]);
+
+        return [
+          f.numeroProcesso,
+          f.tipoFomento,
+          `${formatarData(f.dataInicio)} a ${formatarData(f.dataFim)}`,
+          formatarMoeda(f.valorTotal),
+          formatarMoeda(dist),
+          formatarMoeda(disp),
+        ];
+      });
+
+      somaGeralTotal += somaTotal;
+
+      return {
+        chave: agencia,
+        titulo: `Agência ${agencia}`,
+        subtitulo: `${lista.length} ${lista.length === 1 ? "financiamento registrado" : "financiamentos registrados"}`,
+        colunas: ["Processo", "Tipo de fomento", "Vigência", "Valor total", "Distribuído", "Disponível"],
+        linhas,
+        subtotalLabel: `Subtotal ${agencia}`,
+        subtotalValor: `Total: ${formatarMoeda(somaTotal)} · Distribuído: ${formatarMoeda(somaDist)} · Disponível: ${formatarMoeda(somaDisp)}`,
+      };
+    });
+
+    return atraso({
+      tipo,
+      tituloRelatorio: "Financiamentos por Agência (UC12)",
+      filtroAplicado: filtroLimpo ? `Agência: ${filtroLimpo}` : "Todas as agências",
+      colunasCsv: ["Agência", "Processo", "Tipo de fomento", "Início", "Fim", "Valor total", "Distribuído", "Disponível"],
+      linhasCsv,
+      grupos,
+      totalRegistros: filtrados.length,
+      resumoGeral: `${grupos.length} ${grupos.length === 1 ? "agência" : "agências"} · ${filtrados.length} ${filtrados.length === 1 ? "financiamento" : "financiamentos"} · Total ${formatarMoeda(somaGeralTotal)}`,
+    });
+  },
 
   dashboard: (): Promise<Dashboard> => {
     const conta = (s: string) => projetos.filter((p) => p.situacao === s).length;

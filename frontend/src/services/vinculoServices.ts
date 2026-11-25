@@ -74,6 +74,6 @@ export const vinculosService = {
 
   listarProducoes: (codigo: string) =>
     USE_MOCK
-      ? mockApi.listarProducoes()
+      ? mockApi.listarProducoes(codigo)
       : apiFetch<ProducaoVinculada[]>(`${base(codigo)}/producoes`),
 };
