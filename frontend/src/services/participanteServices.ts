@@ -5,6 +5,7 @@ export type TipoParticipante = "Docente" | "Discente" | "Técnico";
 export const TIPOS_PARTICIPANTE: TipoParticipante[] = ["Docente", "Discente", "Técnico"];
 
 export type PerfilAcesso = "Administrador" | "Coordenador" | "Participante";
+export const PERFIS_ACESSO: PerfilAcesso[] = ["Participante", "Coordenador", "Administrador"];
 
 export interface Participante {
   cpf: string;
@@ -20,6 +21,7 @@ export interface NovoParticipante {
   cpf: string;
   tipo: TipoParticipante;
   perfilAcesso?: PerfilAcesso;
+  senha: string;
   senhaHash?: string;
 }
 

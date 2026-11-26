@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace sgpp.Models
 {
@@ -8,6 +9,7 @@ namespace sgpp.Models
         public string nome { get; set; } = string.Empty;
         public string emailInstitucional { get; set; } = string.Empty;
         public string tipo { get; set; } = string.Empty;
+        [JsonIgnore]
         public string? senhaHash { get; set; } = string.Empty;
         public string? perfilAcesso { get; set; } = string.Empty;
 

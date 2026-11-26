@@ -17,15 +17,18 @@ namespace sgpp.Controllers
     {
         private readonly ProjetoServices _projetoServices;
         private readonly VinculoServices _vinculoServices;
+        private readonly FinanciamentoServices _financiamentoServices;
         private readonly Func<MySqlConnection> _createConnection;
 
         public ProjetosController(
             ProjetoServices projetoServices,
             VinculoServices vinculoServices,
+            FinanciamentoServices financiamentoServices,
             Func<MySqlConnection> createConnection)
         {
             _projetoServices = projetoServices;
             _vinculoServices = vinculoServices;
+            _financiamentoServices = financiamentoServices;
             _createConnection = createConnection;
         }
 
@@ -259,22 +262,83 @@ namespace sgpp.Controllers
         [HttpGet("{codigo}/financiamentos")]
         public async Task<IActionResult> GetFinanciamentos(string codigo)
         {
-            await using var connection = _createConnection();
-            const string sql = @"
-                SELECT f.id_financiamento AS idFinanciamento,
-                       f.agenciaFinanciadora AS agencia,
-                       f.tipoFomento,
-                       af.tipoVinculo,
-                       f.dataInicio,
-                       f.dataFim,
-                       af.valorDestinado AS valor
-                FROM Apoio_Financeiro af
-                JOIN Financiamento f ON af.id_financiamento = f.id_financiamento
-                WHERE af.projeto_codigo = @codigo
-                ORDER BY f.dataInicio DESC;";
+            try
+            {
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                var financiamentos = await _financiamentoServices.ListarFinanciamentosPorProjeto(codigoDecodificado);
+                return Ok(financiamentos);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
 
-            var financiamentos = await connection.QueryAsync<FinanciamentoVinculadoResponse>(sql, new { codigo = codigo.Trim() });
-            return Ok(financiamentos);
+        [HttpPost("{codigo}/financiamentos")]
+        [ExigirPerfil("Administrador")]
+        public async Task<IActionResult> VincularFinanciamento(string codigo, [FromBody] VincularFinanciamentoRequest? request)
+        {
+            try
+            {
+                if (request is null)
+                {
+                    return BadRequest(new { mensagem = "Os dados do vínculo financeiro são obrigatórios." });
+                }
+
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                var idFinanciamento = request.idFinanciamento ?? request.id_financiamento ?? 0;
+                var criado = await _financiamentoServices.VincularProjeto(
+                    idFinanciamento,
+                    codigoDecodificado,
+                    request.tipoVinculo,
+                    request.valorDestinado);
+
+                return CreatedAtAction(nameof(GetFinanciamentos), new { codigo = codigoDecodificado }, criado);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return Conflict(new { mensagem = "Este projeto já está vinculado ao financiamento selecionado." });
+            }
+            catch (MySqlException ex) when (ex.Number == 1452)
+            {
+                return BadRequest(new { mensagem = "Financiamento ou projeto informado não encontrado." });
+            }
+        }
+
+        [HttpDelete("{codigo}/financiamentos/{idFinanciamento:int}")]
+        [ExigirPerfil("Administrador")]
+        public async Task<IActionResult> RemoverFinanciamento(string codigo, int idFinanciamento)
+        {
+            try
+            {
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                await _financiamentoServices.RemoverVinculo(idFinanciamento, codigoDecodificado);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
         }
 
         [HttpGet("{codigo}/producoes")]
@@ -294,17 +358,6 @@ namespace sgpp.Controllers
             var producoes = await connection.QueryAsync<ProducaoVinculadaResponse>(sql, new { codigo = codigo.Trim() });
             return Ok(producoes);
         }
-    }
-
-    public class FinanciamentoVinculadoResponse
-    {
-        public int idFinanciamento { get; set; }
-        public string agencia { get; set; } = string.Empty;
-        public string tipoFomento { get; set; } = string.Empty;
-        public string tipoVinculo { get; set; } = string.Empty;
-        public DateTime dataInicio { get; set; }
-        public DateTime dataFim { get; set; }
-        public decimal valor { get; set; }
     }
 
     public class ProducaoVinculadaResponse

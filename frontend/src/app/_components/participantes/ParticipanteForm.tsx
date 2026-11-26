@@ -11,8 +11,10 @@ import {
 } from "@/lib/validacao";
 import {
   participantesService,
+  PERFIS_ACESSO,
   TIPOS_PARTICIPANTE,
   type Participante,
+  type PerfilAcesso,
   type TipoParticipante,
 } from "@/services/participanteServices";
 
@@ -26,12 +28,19 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [tipo, setTipo] = useState<TipoParticipante | "">("");
+  const [perfilAcesso, setPerfilAcesso] = useState<PerfilAcesso>("Participante");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
 
   const [tocado, setTocado] = useState({
     nome: false,
     email: false,
     cpf: false,
     tipo: false,
+    senha: false,
+    confirmarSenha: false,
   });
 
   const [salvando, setSalvando] = useState(false);
@@ -76,24 +85,64 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
 
   const erroTipo = tocado.tipo && !tipo ? "Selecione o tipo de participante." : null;
 
+  let erroSenha: string | null = null;
+  if (tocado.senha || senha.length > 0) {
+    if (senha.trim().length === 0) {
+      erroSenha = "Informe a senha de acesso.";
+    } else if (senha.length < 6) {
+      erroSenha = "A senha deve ter no mínimo 6 caracteres.";
+    }
+  }
+
+  let erroConfirmarSenha: string | null = null;
+  if (tocado.confirmarSenha || confirmarSenha.length > 0) {
+    if (confirmarSenha.length === 0) {
+      erroConfirmarSenha = "Confirme a senha de acesso.";
+    } else if (confirmarSenha !== senha) {
+      erroConfirmarSenha = "As senhas não coincidem.";
+    }
+  }
+
+  const senhaValida = senha.trim().length > 0 && senha.length >= 6 && confirmarSenha === senha;
+
   const formularioValido =
     nomeTrim.length >= 3 &&
     emailValidoDisponivel &&
     cpfValidoDisponivel &&
-    tipo !== "";
+    tipo !== "" &&
+    senhaValida;
 
   function limparFormulario() {
     setNome("");
     setEmail("");
     setCpf("");
     setTipo("");
-    setTocado({ nome: false, email: false, cpf: false, tipo: false });
+    setPerfilAcesso("Participante");
+    setSenha("");
+    setConfirmarSenha("");
+    setMostrarSenha(false);
+    setMostrarConfirmacao(false);
+    setTocado({
+      nome: false,
+      email: false,
+      cpf: false,
+      tipo: false,
+      senha: false,
+      confirmarSenha: false,
+    });
     setErroEnvio(null);
   }
 
   async function salvar(e: FormEvent) {
     e.preventDefault();
-    setTocado({ nome: true, email: true, cpf: true, tipo: true });
+    setTocado({
+      nome: true,
+      email: true,
+      cpf: true,
+      tipo: true,
+      senha: true,
+      confirmarSenha: true,
+    });
     if (!formularioValido || !tipo) return;
 
     setErroEnvio(null);
@@ -105,6 +154,8 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
         emailInstitucional: emailTrim,
         cpf: formatarCpf(cpfDigitos),
         tipo,
+        perfilAcesso,
+        senha,
       });
       limparFormulario();
       onCadastrado(novo);
@@ -224,7 +275,7 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
           )}
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label htmlFor="tipo" className={rotulo}>
             Tipo
           </label>
@@ -248,6 +299,98 @@ export default function ParticipanteForm({ participantesExistentes, onCadastrado
           {erroTipo && (
             <p id="erro-tipo" className="mt-1 text-xs text-red-600">
               {erroTipo}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="perfilAcesso" className={rotulo}>
+            Perfil de acesso
+          </label>
+          <select
+            id="perfilAcesso"
+            value={perfilAcesso}
+            onChange={(e) => setPerfilAcesso(e.target.value as PerfilAcesso)}
+            className={inputBase}
+          >
+            {PERFIS_ACESSO.map((perfil) => (
+              <option key={perfil} value={perfil}>
+                {perfil}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="senha" className={rotulo}>
+            Senha de acesso
+          </label>
+          <div className="relative">
+            <input
+              id="senha"
+              type={mostrarSenha ? "text" : "password"}
+              required
+              minLength={6}
+              maxLength={255}
+              autoComplete="new-password"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              onBlur={() => setTocado((prev) => ({ ...prev, senha: true }))}
+              placeholder="Mínimo de 6 caracteres"
+              aria-invalid={erroSenha ? true : undefined}
+              aria-describedby={erroSenha ? "erro-senha" : undefined}
+              className={`${inputBase} pr-10 ${erroSenha ? classeErro : ""}`}
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarSenha((v) => !v)}
+              aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+            >
+              <Icon nome={mostrarSenha ? "eye" : "eyeOff"} className="h-4 w-4" />
+            </button>
+          </div>
+          {erroSenha && (
+            <p id="erro-senha" className="mt-1 text-xs text-red-600">
+              {erroSenha}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="confirmarSenha" className={rotulo}>
+            Confirmar senha
+          </label>
+          <div className="relative">
+            <input
+              id="confirmarSenha"
+              type={mostrarConfirmacao ? "text" : "password"}
+              required
+              minLength={6}
+              maxLength={255}
+              autoComplete="new-password"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              onBlur={() => setTocado((prev) => ({ ...prev, confirmarSenha: true }))}
+              placeholder="Repita a senha"
+              aria-invalid={erroConfirmarSenha ? true : undefined}
+              aria-describedby={erroConfirmarSenha ? "erro-confirmarSenha" : undefined}
+              className={`${inputBase} pr-10 ${
+                erroConfirmarSenha ? classeErro : senhaValida ? classeSucesso : ""
+              }`}
+            />
+            <button
+              type="button"
+              onClick={() => setMostrarConfirmacao((v) => !v)}
+              aria-label={mostrarConfirmacao ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800"
+            >
+              <Icon nome={mostrarConfirmacao ? "eye" : "eyeOff"} className="h-4 w-4" />
+            </button>
+          </div>
+          {erroConfirmarSenha && (
+            <p id="erro-confirmarSenha" className="mt-1 text-xs text-red-600">
+              {erroConfirmarSenha}
             </p>
           )}
         </div>

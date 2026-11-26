@@ -11,5 +11,12 @@ namespace sgpp.Repositories.Interfaces
         Task<Financiamento?> GetById(int id);
         Task<bool> Update(Financiamento financiamento);
         Task<bool> Delete(int id);
+        Task InserirApoio(ApoioFinanceiro apoio);
+        Task<IEnumerable<ApoioFinanceiroDetalhe>> ListarProjetosPorFinanciamento(int idFinanciamento);
+        Task<IEnumerable<ApoioFinanceiroDetalhe>> ListarTodosApoios();
+        Task<ApoioFinanceiroDetalhe?> ObterApoio(int idFinanciamento, string projetoCodigo);
+        Task<IEnumerable<FinanciamentoVinculado>> ListarFinanciamentosPorProjeto(string projetoCodigo);
+        Task<decimal> CalcularValorDistribuido(int idFinanciamento);
+        Task<bool> RemoverApoio(int idFinanciamento, string projetoCodigo);
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using sgpp.DTOs;
 using sgpp.Models;
 using sgpp.Security;
 using sgpp.Services;
@@ -100,6 +101,111 @@ namespace sgpp.Controllers
             try
             {
                 await _financiamentoServices.Delete(id);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
+
+        [HttpGet("apoios")]
+        public async Task<IActionResult> GetAllApoios()
+        {
+            var apoios = await _financiamentoServices.ListarTodosApoios();
+            return Ok(apoios);
+        }
+
+        [HttpGet("{id:int}/projetos")]
+        public async Task<IActionResult> GetProjetos(int id)
+        {
+            try
+            {
+                var projetos = await _financiamentoServices.ListarProjetosPorFinanciamento(id);
+                return Ok(projetos);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
+
+        [HttpGet("{id:int}/saldo")]
+        public async Task<IActionResult> GetSaldo(int id)
+        {
+            try
+            {
+                var saldo = await _financiamentoServices.ObterSaldo(id);
+                return Ok(saldo);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
+
+        [HttpPost("{id:int}/projetos")]
+        [ExigirPerfil("Administrador")]
+        public async Task<IActionResult> VincularProjeto(int id, [FromBody] VincularFinanciamentoRequest? request)
+        {
+            try
+            {
+                if (request is null)
+                {
+                    return BadRequest(new { mensagem = "Os dados do vínculo financeiro são obrigatórios." });
+                }
+
+                var codigoProjeto = request.projetoCodigo ?? request.projeto_codigo ?? string.Empty;
+                var criado = await _financiamentoServices.VincularProjeto(
+                    id,
+                    codigoProjeto,
+                    request.tipoVinculo,
+                    request.valorDestinado);
+
+                return CreatedAtAction(nameof(GetProjetos), new { id }, criado);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return Conflict(new { mensagem = "Este projeto já está vinculado ao financiamento selecionado." });
+            }
+            catch (MySqlException ex) when (ex.Number == 1452)
+            {
+                return BadRequest(new { mensagem = "Financiamento ou projeto informado não encontrado." });
+            }
+        }
+
+        [HttpDelete("{id:int}/projetos/{codigo}")]
+        [ExigirPerfil("Administrador")]
+        public async Task<IActionResult> RemoverProjeto(int id, string codigo)
+        {
+            try
+            {
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                await _financiamentoServices.RemoverVinculo(id, codigoDecodificado);
                 return NoContent();
             }
             catch (KeyNotFoundException ex)
