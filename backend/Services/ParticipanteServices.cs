@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using sgpp.Models;
@@ -16,6 +18,7 @@ namespace sgpp.Services
         private static readonly Regex RegexCpfFormato = new(@"^(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})$", RegexOptions.Compiled);
         private static readonly Regex RegexEmailGeral = new(@"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", RegexOptions.Compiled);
         private static readonly Regex RegexDominioInstitucional = new(@"@([a-z0-9-]+\.)*(ufes\.br|edu\.br|gov\.br|edu)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex RegexSha256Hex = new(@"^[0-9a-fA-F]{64}$", RegexOptions.Compiled);
 
         private readonly IParticipanteRepository _participanteRepository;
 
@@ -63,11 +66,25 @@ namespace sgpp.Services
             participante.cpf = ValidarEFormatarCpf(participante.cpf);
             ValidarDadosComuns(participante, perfilPadrao: "Participante");
 
-            participante.senhaHash = (participante.senhaHash ?? string.Empty).Trim();
-            if (participante.senhaHash.Length > 255)
+            var senhaInformada = participante.senhaHash ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(senhaInformada))
             {
-                throw new ArgumentException("A senha deve ter no máximo 255 caracteres.");
+                throw new ArgumentException("A senha de acesso é obrigatória.");
             }
+
+            if (senhaInformada.Length < 6)
+            {
+                throw new ArgumentException("A senha de acesso deve ter no mínimo 6 caracteres.");
+            }
+
+            if (senhaInformada.Length > 255)
+            {
+                throw new ArgumentException("A senha de acesso deve ter no máximo 255 caracteres.");
+            }
+
+            participante.senhaHash = RegexSha256Hex.IsMatch(senhaInformada)
+                ? senhaInformada.ToUpperInvariant()
+                : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(senhaInformada)));
 
             var existentePorCpf = await _participanteRepository.GetByCpf(participante.cpf);
             if (existentePorCpf is not null)

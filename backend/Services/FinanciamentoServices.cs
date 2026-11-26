@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using sgpp.DTOs;
 using sgpp.Models;
 using sgpp.Repositories.Interfaces;
 
@@ -9,10 +10,14 @@ namespace sgpp.Services
     public class FinanciamentoServices
     {
         private readonly IFinanciamentoRepository _financiamentoRepository;
+        private readonly IProjetoRepository _projetoRepository;
 
-        public FinanciamentoServices(IFinanciamentoRepository financiamentoRepository)
+        public FinanciamentoServices(
+            IFinanciamentoRepository financiamentoRepository,
+            IProjetoRepository projetoRepository)
         {
             _financiamentoRepository = financiamentoRepository;
+            _projetoRepository = projetoRepository;
         }
 
         public async Task<IEnumerable<Financiamento>> GetAll(string? agencia = null, string? tipoFomento = null)
@@ -68,6 +73,12 @@ namespace sgpp.Services
             financiamento.id_financiamento = id;
             ValidarDadosFinanciamento(financiamento);
 
+            var valorDistribuido = await _financiamentoRepository.CalcularValorDistribuido(id);
+            if (financiamento.valorTotal < valorDistribuido)
+            {
+                throw new ArgumentException($"O valor total do financiamento não pode ser menor que o valor já distribuído ({valorDistribuido:N2}).");
+            }
+
             await _financiamentoRepository.Update(financiamento);
             return (await _financiamentoRepository.GetById(id)) ?? financiamento;
         }
@@ -84,6 +95,217 @@ namespace sgpp.Services
             {
                 throw new KeyNotFoundException($"Financiamento '{id}' não encontrado.");
             }
+        }
+
+        public async Task<IEnumerable<ApoioFinanceiroDetalhe>> ListarProjetosPorFinanciamento(int idFinanciamento)
+        {
+            if (idFinanciamento <= 0)
+            {
+                throw new ArgumentException("O ID do financiamento deve ser maior que zero.");
+            }
+
+            var financiamento = await _financiamentoRepository.GetById(idFinanciamento);
+            if (financiamento is null)
+            {
+                throw new KeyNotFoundException($"Financiamento '{idFinanciamento}' não encontrado.");
+            }
+
+            return await _financiamentoRepository.ListarProjetosPorFinanciamento(idFinanciamento);
+        }
+
+        public async Task<IEnumerable<ApoioFinanceiroDetalhe>> ListarTodosApoios()
+        {
+            return await _financiamentoRepository.ListarTodosApoios();
+        }
+
+        public async Task<IEnumerable<FinanciamentoVinculado>> ListarFinanciamentosPorProjeto(string projetoCodigo)
+        {
+            if (string.IsNullOrWhiteSpace(projetoCodigo))
+            {
+                throw new ArgumentException("O código do projeto é obrigatório.");
+            }
+
+            var codigoNormalizado = projetoCodigo.Trim();
+            var projeto = await _projetoRepository.GetByCodigo(codigoNormalizado);
+            if (projeto is null)
+            {
+                throw new KeyNotFoundException($"Projeto '{codigoNormalizado}' não encontrado.");
+            }
+
+            return await _financiamentoRepository.ListarFinanciamentosPorProjeto(codigoNormalizado);
+        }
+
+        public async Task<SaldoFinanciamentoResponse> ObterSaldo(int idFinanciamento)
+        {
+            if (idFinanciamento <= 0)
+            {
+                throw new ArgumentException("O ID do financiamento deve ser maior que zero.");
+            }
+
+            var financiamento = await _financiamentoRepository.GetById(idFinanciamento);
+            if (financiamento is null)
+            {
+                throw new KeyNotFoundException($"Financiamento '{idFinanciamento}' não encontrado.");
+            }
+
+            var valorDistribuido = await _financiamentoRepository.CalcularValorDistribuido(idFinanciamento);
+            var valorDisponivel = Math.Max(0m, financiamento.valorTotal - valorDistribuido);
+            var percentualDistribuido = financiamento.valorTotal > 0
+                ? Math.Round((valorDistribuido / financiamento.valorTotal) * 100m, 2)
+                : 0m;
+
+            return new SaldoFinanciamentoResponse
+            {
+                idFinanciamento = financiamento.id_financiamento,
+                valorTotal = financiamento.valorTotal,
+                valorDistribuido = valorDistribuido,
+                valorDisponivel = valorDisponivel,
+                percentualDistribuido = percentualDistribuido
+            };
+        }
+
+        public async Task<ApoioFinanceiroDetalhe> VincularProjeto(
+            int idFinanciamento,
+            string projetoCodigo,
+            string tipoVinculo,
+            decimal? valorDestinado)
+        {
+            if (idFinanciamento <= 0)
+            {
+                throw new ArgumentException("O ID do financiamento deve ser maior que zero.");
+            }
+
+            if (string.IsNullOrWhiteSpace(projetoCodigo))
+            {
+                throw new ArgumentException("O código do projeto é obrigatório.");
+            }
+
+            var codigoNormalizado = projetoCodigo.Trim();
+
+            var financiamento = await _financiamentoRepository.GetById(idFinanciamento);
+            if (financiamento is null)
+            {
+                throw new KeyNotFoundException($"Financiamento '{idFinanciamento}' não encontrado.");
+            }
+
+            var projeto = await _projetoRepository.GetByCodigo(codigoNormalizado);
+            if (projeto is null)
+            {
+                throw new KeyNotFoundException($"Projeto '{codigoNormalizado}' não encontrado.");
+            }
+
+            var tipoNormalizado = NormalizarTipoVinculo(tipoVinculo);
+
+            // RN03 permite N:M entre projetos e financiamentos, impedindo apenas vínculo duplicado do mesmo par.
+            var vinculoExistente = await _financiamentoRepository.ObterApoio(idFinanciamento, codigoNormalizado);
+            if (vinculoExistente is not null)
+            {
+                throw new InvalidOperationException("Este projeto já está vinculado ao financiamento selecionado.");
+            }
+
+            var valorDistribuido = await _financiamentoRepository.CalcularValorDistribuido(idFinanciamento);
+            var saldoDisponivel = financiamento.valorTotal - valorDistribuido;
+
+            decimal valorFinal;
+            if (tipoNormalizado == "Total")
+            {
+                if (valorDistribuido > 0)
+                {
+                    throw new InvalidOperationException("RN03: Não é possível usar vínculo 'Total' quando o financiamento já possui valores distribuídos.");
+                }
+
+                if (valorDestinado.HasValue && valorDestinado.Value < 0)
+                {
+                    throw new ArgumentException("O valor destinado não pode ser negativo.");
+                }
+
+                if (valorDestinado.HasValue && valorDestinado.Value > 0 && valorDestinado.Value != financiamento.valorTotal)
+                {
+                    throw new ArgumentException("Para vínculo 'Total', o valor destinado deve ser igual ao valor total do financiamento.");
+                }
+
+                valorFinal = financiamento.valorTotal;
+            }
+            else
+            {
+                if (!valorDestinado.HasValue || valorDestinado.Value <= 0)
+                {
+                    throw new ArgumentException("Para vínculo 'Parcial', informe um valor destinado maior que zero.");
+                }
+
+                valorFinal = valorDestinado.Value;
+            }
+
+            // RN03: O valor destinado não pode ultrapassar o saldo disponível (valorTotal - valorDistribuido).
+            if (valorFinal > saldoDisponivel)
+            {
+                throw new ArgumentException($"RN03: O valor destinado ({valorFinal:N2}) ultrapassa o saldo disponível ({Math.Max(0m, saldoDisponivel):N2}).");
+            }
+
+            var apoio = new ApoioFinanceiro
+            {
+                projeto_codigo = codigoNormalizado,
+                id_financiamento = idFinanciamento,
+                tipoVinculo = tipoNormalizado,
+                valorDestinado = valorFinal
+            };
+
+            await _financiamentoRepository.InserirApoio(apoio);
+            return (await _financiamentoRepository.ObterApoio(idFinanciamento, codigoNormalizado))!;
+        }
+
+        public async Task RemoverVinculo(int idFinanciamento, string projetoCodigo)
+        {
+            if (idFinanciamento <= 0)
+            {
+                throw new ArgumentException("O ID do financiamento deve ser maior que zero.");
+            }
+
+            if (string.IsNullOrWhiteSpace(projetoCodigo))
+            {
+                throw new ArgumentException("O código do projeto é obrigatório.");
+            }
+
+            var codigoNormalizado = projetoCodigo.Trim();
+
+            var financiamento = await _financiamentoRepository.GetById(idFinanciamento);
+            if (financiamento is null)
+            {
+                throw new KeyNotFoundException($"Financiamento '{idFinanciamento}' não encontrado.");
+            }
+
+            var projeto = await _projetoRepository.GetByCodigo(codigoNormalizado);
+            if (projeto is null)
+            {
+                throw new KeyNotFoundException($"Projeto '{codigoNormalizado}' não encontrado.");
+            }
+
+            var removido = await _financiamentoRepository.RemoverApoio(idFinanciamento, codigoNormalizado);
+            if (!removido)
+            {
+                throw new KeyNotFoundException($"Vínculo entre o financiamento '{idFinanciamento}' e o projeto '{codigoNormalizado}' não encontrado.");
+            }
+        }
+
+        private static string NormalizarTipoVinculo(string? tipoVinculo)
+        {
+            if (string.IsNullOrWhiteSpace(tipoVinculo))
+            {
+                throw new ArgumentException("O tipo de vínculo é obrigatório ('Total' ou 'Parcial').");
+            }
+
+            var tipoTrim = tipoVinculo.Trim();
+            if (string.Equals(tipoTrim, "Total", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Total";
+            }
+
+            if (string.Equals(tipoTrim, "Parcial", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Parcial";
+            }
+
+            throw new ArgumentException("Tipo de vínculo inválido. Utilize 'Total' ou 'Parcial'.");
         }
 
         private static void ValidarDadosFinanciamento(Financiamento financiamento)

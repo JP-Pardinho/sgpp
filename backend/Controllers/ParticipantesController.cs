@@ -22,10 +22,25 @@ namespace sgpp.Controllers
 
         [HttpPost]
         [ExigirPerfil("Administrador")]
-        public async Task<IActionResult> Create([FromBody] Participante participante)
+        public async Task<IActionResult> Create([FromBody] CriarParticipanteRequest? request)
         {
             try
             {
+                if (request is null)
+                {
+                    return BadRequest(new { mensagem = "Os dados do participante são obrigatórios." });
+                }
+
+                var participante = new Participante
+                {
+                    cpf = request.cpf,
+                    nome = request.nome,
+                    emailInstitucional = request.emailInstitucional,
+                    tipo = request.tipo,
+                    perfilAcesso = request.perfilAcesso,
+                    senhaHash = !string.IsNullOrEmpty(request.senha) ? request.senha : request.senhaHash
+                };
+
                 var criado = await _participanteServices.Create(participante);
                 return CreatedAtAction(nameof(GetByCpf), new { cpf = criado.cpf }, criado);
             }
@@ -120,6 +135,17 @@ namespace sgpp.Controllers
                 return Conflict(new { mensagem = "Não é possível excluir o participante pois ele está vinculado como coordenador de um ou mais projetos." });
             }
         }
+    }
+
+    public class CriarParticipanteRequest
+    {
+        public string cpf { get; set; } = string.Empty;
+        public string nome { get; set; } = string.Empty;
+        public string emailInstitucional { get; set; } = string.Empty;
+        public string tipo { get; set; } = string.Empty;
+        public string? perfilAcesso { get; set; }
+        public string? senha { get; set; }
+        public string? senhaHash { get; set; }
     }
 
     public class AtualizarParticipanteRequest

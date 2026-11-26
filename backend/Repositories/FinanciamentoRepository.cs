@@ -85,6 +85,18 @@ namespace sgpp.Repositories
             return linhasAfetadas > 0;
         }
 
+        private const string BaseApoioDetalheSql = @"
+            SELECT af.id_financiamento AS idFinanciamento,
+                   af.projeto_codigo AS projetoCodigo,
+                   p.titulo AS projetoTitulo,
+                   p.coordenador_cpf AS coordenadorCpf,
+                   part.nome AS coordenadorNome,
+                   af.tipoVinculo,
+                   af.valorDestinado
+            FROM Apoio_Financeiro af
+            JOIN Projeto p ON af.projeto_codigo = p.codigo
+            JOIN Participante part ON p.coordenador_cpf = part.cpf";
+
         public async Task<bool> Delete(int id)
         {
             await using var connection = _createConnection();
@@ -93,6 +105,94 @@ namespace sgpp.Repositories
                 WHERE id_financiamento = @id;";
 
             var linhasAfetadas = await connection.ExecuteAsync(sql, new { id });
+            return linhasAfetadas > 0;
+        }
+
+        public async Task InserirApoio(ApoioFinanceiro apoio)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                INSERT INTO Apoio_Financeiro (projeto_codigo, id_financiamento, tipoVinculo, valorDestinado)
+                VALUES (@projeto_codigo, @id_financiamento, @tipoVinculo, @valorDestinado);";
+
+            await connection.ExecuteAsync(sql, apoio);
+        }
+
+        public async Task<IEnumerable<ApoioFinanceiroDetalhe>> ListarProjetosPorFinanciamento(int idFinanciamento)
+        {
+            await using var connection = _createConnection();
+            var sql = $@"{BaseApoioDetalheSql}
+                WHERE af.id_financiamento = @id
+                ORDER BY p.titulo ASC, af.projeto_codigo ASC;";
+
+            return await connection.QueryAsync<ApoioFinanceiroDetalhe>(sql, new { id = idFinanciamento });
+        }
+
+        public async Task<IEnumerable<ApoioFinanceiroDetalhe>> ListarTodosApoios()
+        {
+            await using var connection = _createConnection();
+            var sql = $@"{BaseApoioDetalheSql}
+                ORDER BY af.id_financiamento ASC, p.titulo ASC;";
+
+            return await connection.QueryAsync<ApoioFinanceiroDetalhe>(sql);
+        }
+
+        public async Task<ApoioFinanceiroDetalhe?> ObterApoio(int idFinanciamento, string projetoCodigo)
+        {
+            await using var connection = _createConnection();
+            var sql = $@"{BaseApoioDetalheSql}
+                WHERE af.id_financiamento = @id AND af.projeto_codigo = @codigo;";
+
+            return await connection.QueryFirstOrDefaultAsync<ApoioFinanceiroDetalhe>(sql, new
+            {
+                id = idFinanciamento,
+                codigo = projetoCodigo
+            });
+        }
+
+        public async Task<IEnumerable<FinanciamentoVinculado>> ListarFinanciamentosPorProjeto(string projetoCodigo)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT f.id_financiamento AS idFinanciamento,
+                       f.agenciaFinanciadora AS agencia,
+                       f.tipoFomento,
+                       af.tipoVinculo,
+                       f.dataInicio,
+                       f.dataFim,
+                       af.valorDestinado AS valor
+                FROM Apoio_Financeiro af
+                JOIN Financiamento f ON af.id_financiamento = f.id_financiamento
+                WHERE af.projeto_codigo = @codigo
+                ORDER BY f.dataInicio DESC, f.id_financiamento ASC;";
+
+            return await connection.QueryAsync<FinanciamentoVinculado>(sql, new { codigo = projetoCodigo });
+        }
+
+        public async Task<decimal> CalcularValorDistribuido(int idFinanciamento)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT COALESCE(SUM(valorDestinado), 0)
+                FROM Apoio_Financeiro
+                WHERE id_financiamento = @id;";
+
+            return await connection.ExecuteScalarAsync<decimal>(sql, new { id = idFinanciamento });
+        }
+
+        public async Task<bool> RemoverApoio(int idFinanciamento, string projetoCodigo)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                DELETE FROM Apoio_Financeiro
+                WHERE id_financiamento = @id AND projeto_codigo = @codigo;";
+
+            var linhasAfetadas = await connection.ExecuteAsync(sql, new
+            {
+                id = idFinanciamento,
+                codigo = projetoCodigo
+            });
+
             return linhasAfetadas > 0;
         }
     }
