@@ -5,7 +5,7 @@ import { emBreve } from "@/lib/format";
 
 interface Props {
   titulo: string;
-  textoBotao: string;
+  textoBotao?: string;
   hrefBotao?: string;
   colunas: string[];
   vazio: string;
@@ -30,15 +30,16 @@ export default function SecaoTabela({
     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900">{titulo}</h2>
-        {hrefBotao ? (
-          <Link href={hrefBotao} className={CLASSE_BOTAO}>
-            <Icon nome="plus" className="h-4 w-4" /> {textoBotao}
-          </Link>
-        ) : (
-          <button type="button" onClick={emBreve} className={CLASSE_BOTAO}>
-            <Icon nome="plus" className="h-4 w-4" /> {textoBotao}
-          </button>
-        )}
+        {textoBotao &&
+          (hrefBotao ? (
+            <Link href={hrefBotao} className={CLASSE_BOTAO}>
+              <Icon nome="plus" className="h-4 w-4" /> {textoBotao}
+            </Link>
+          ) : (
+            <button type="button" onClick={emBreve} className={CLASSE_BOTAO}>
+              <Icon nome="plus" className="h-4 w-4" /> {textoBotao}
+            </button>
+          ))}
       </div>
 
       <div className="overflow-x-auto">

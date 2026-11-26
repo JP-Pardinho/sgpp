@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using sgpp.DTOs;
 using sgpp.Models;
+using sgpp.Security;
 using sgpp.Services;
 
 namespace sgpp.Controllers
@@ -21,6 +22,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPost]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Create([FromBody] ProducaoCientifica producao)
         {
             try
@@ -65,6 +67,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Update(int id, [FromBody] AtualizarProducaoRequest request)
         {
             try
@@ -93,6 +96,7 @@ namespace sgpp.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -111,6 +115,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPost("{id:int}/vincular")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Vincular(int id, [FromBody] VincularProducaoRequest? request)
         {
             try
@@ -156,6 +161,7 @@ namespace sgpp.Controllers
         }
 
         [HttpDelete("{id:int}/autores/{cpf}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> RemoveAutor(int id, string cpf)
         {
             try

@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import { btnContorno, btnPrimario, inputBase } from "@/app/_components/ui/Botoes";
 import Icon from "@/app/_components/ui/Icon";
 import StatusBadge from "@/app/_components/ui/StatusBadge";
 import { formatarData } from "@/lib/format";
+import { obterPermissoes } from "@/lib/permissoes";
 import { participantesService, type Participante } from "@/services/participanteServices";
 import { projetosService, SITUACOES, type Projeto, type ResultadoPaginado } from "@/services/projetoServices";
 
@@ -20,6 +22,8 @@ export default function ListaProjetos() {
 }
 
 function ListaProjetosInterna({ buscaInicial }: { buscaInicial: string }) {
+    const usuario = useUsuario();
+    const permissoes = obterPermissoes(usuario?.perfil);
     const [busca, setBusca] = useState(buscaInicial);
     const [buscaAplicada, setBuscaAplicada] = useState(buscaInicial);
     const [situacao, setSituacao] = useState("");
@@ -100,9 +104,11 @@ function ListaProjetosInterna({ buscaInicial }: { buscaInicial: string }) {
                 { rotulo: "Lista de projetos" },
             ]}
             acoes={
-                <Link href="/projetos/novo" className={btnPrimario}>
-                    <Icon nome="plus" className="h-4 w-4" /> Novo projeto
-                </Link>
+                permissoes.gerenciarProjetos ? (
+                    <Link href="/projetos/novo" className={btnPrimario}>
+                        <Icon nome="plus" className="h-4 w-4" /> Novo projeto
+                    </Link>
+                ) : undefined
             }
         >
             {/* Filtros */}
@@ -168,8 +174,12 @@ function ListaProjetosInterna({ buscaInicial }: { buscaInicial: string }) {
                                             <td className="px-3 py-2.5">
                                                 <div className="flex items-center gap-3 text-slate-500">
                                                     <Link href={`/projetos/${encodeURIComponent(p.codigo)}`} title="Visualizar" aria-label={`Visualizar ${p.codigo}`} className="hover:text-blue-700"><Icon nome="eye" className="h-[18px] w-[18px]" /></Link>
-                                                    <Link href={`/projetos/${encodeURIComponent(p.codigo)}/editar`} title="Editar" aria-label={`Editar ${p.codigo}`} className="hover:text-blue-700"><Icon nome="pencil" className="h-[18px] w-[18px]" /></Link>
-                                                    <button type="button" onClick={() => excluir(p)} title="Excluir" aria-label={`Excluir ${p.codigo}`} className="hover:text-red-600"><Icon nome="trash" className="h-[18px] w-[18px]" /></button>
+                                                    {permissoes.gerenciarProjetos && (
+                                                        <>
+                                                            <Link href={`/projetos/${encodeURIComponent(p.codigo)}/editar`} title="Editar" aria-label={`Editar ${p.codigo}`} className="hover:text-blue-700"><Icon nome="pencil" className="h-[18px] w-[18px]" /></Link>
+                                                            <button type="button" onClick={() => excluir(p)} title="Excluir" aria-label={`Excluir ${p.codigo}`} className="hover:text-red-600"><Icon nome="trash" className="h-[18px] w-[18px]" /></button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

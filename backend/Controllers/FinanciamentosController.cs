@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using sgpp.Models;
+using sgpp.Security;
 using sgpp.Services;
 
 namespace sgpp.Controllers
@@ -20,6 +21,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPost]
+        [ExigirPerfil("Administrador")]
         public async Task<IActionResult> Create([FromBody] Financiamento financiamento)
         {
             try
@@ -63,6 +65,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [ExigirPerfil("Administrador")]
         public async Task<IActionResult> Update(int id, [FromBody] AtualizarFinanciamentoRequest request)
         {
             try
@@ -91,6 +94,7 @@ namespace sgpp.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [ExigirPerfil("Administrador")]
         public async Task<IActionResult> Delete(int id)
         {
             try

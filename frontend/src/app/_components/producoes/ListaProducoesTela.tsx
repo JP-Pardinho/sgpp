@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import { btnContorno, btnPrimario, inputBase } from "@/app/_components/ui/Botoes";
 import Icon from "@/app/_components/ui/Icon";
+import { obterPermissoes } from "@/lib/permissoes";
 import {
   producoesService,
   TIPOS_PRODUCAO,
@@ -16,6 +18,8 @@ function normalizar(texto: string) {
 }
 
 export default function ListaProducoesTela() {
+  const usuario = useUsuario();
+  const permissoes = obterPermissoes(usuario?.perfil);
   const [producoes, setProducoes] = useState<ProducaoCientifica[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -80,14 +84,16 @@ export default function ListaProducoesTela() {
         { rotulo: "Produções científicas" },
       ]}
       acoes={
-        <>
-          <Link href="/producoes/vincular" className={btnContorno}>
-            Vincular a projeto
-          </Link>
-          <Link href="/producoes/nova" className={btnPrimario}>
-            <Icon nome="plus" className="h-4 w-4" /> Nova produção
-          </Link>
-        </>
+        permissoes.gerenciarProducoes ? (
+          <>
+            <Link href="/producoes/vincular" className={btnContorno}>
+              Vincular a projeto
+            </Link>
+            <Link href="/producoes/nova" className={btnPrimario}>
+              <Icon nome="plus" className="h-4 w-4" /> Nova produção
+            </Link>
+          </>
+        ) : undefined
       }
     >
       {/* Filtros */}
@@ -160,13 +166,13 @@ export default function ListaProducoesTela() {
                     <th className="px-3 py-2 font-semibold">Meio</th>
                     <th className="px-3 py-2 font-semibold">Projeto</th>
                     <th className="px-3 py-2 font-semibold">Autores</th>
-                    <th className="px-3 py-2 font-semibold">Ações</th>
+                    {permissoes.gerenciarProducoes && <th className="px-3 py-2 font-semibold">Ações</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filtradas.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={permissoes.gerenciarProducoes ? 7 : 6} className="px-3 py-8 text-center text-slate-500">
                         Nenhuma produção científica encontrada.
                       </td>
                     </tr>
@@ -207,26 +213,28 @@ export default function ListaProducoesTela() {
                           </div>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2.5">
-                        <div className="flex items-center gap-3">
-                          <Link
-                            href={`/producoes/vincular?producao=${p.id}`}
-                            className="text-sm font-medium text-blue-700 hover:underline"
-                          >
-                            Vincular
-                          </Link>
-                          <button
-                            type="button"
-                            disabled={excluindoId === p.id}
-                            onClick={() => excluir(p)}
-                            title="Excluir"
-                            aria-label={`Excluir ${p.titulo}`}
-                            className="text-slate-500 hover:text-red-600 disabled:opacity-50"
-                          >
-                            <Icon nome="trash" className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
+                      {permissoes.gerenciarProducoes && (
+                        <td className="whitespace-nowrap px-3 py-2.5">
+                          <div className="flex items-center gap-3">
+                            <Link
+                              href={`/producoes/vincular?producao=${p.id}`}
+                              className="text-sm font-medium text-blue-700 hover:underline"
+                            >
+                              Vincular
+                            </Link>
+                            <button
+                              type="button"
+                              disabled={excluindoId === p.id}
+                              onClick={() => excluir(p)}
+                              title="Excluir"
+                              aria-label={`Excluir ${p.titulo}`}
+                              className="text-slate-500 hover:text-red-600 disabled:opacity-50"
+                            >
+                              <Icon nome="trash" className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

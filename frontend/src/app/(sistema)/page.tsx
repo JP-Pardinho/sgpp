@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import Icon from "@/app/_components/ui/Icon";
 import StatusBadge from "@/app/_components/ui/StatusBadge";
 import { btnPrimario, btnSecundario } from "@/app/_components/ui/Botoes";
 import { formatarMesAno, formatarMoedaResumida } from "@/lib/format";
+import { obterPermissoes } from "@/lib/permissoes";
 import { Dashboard, dashboardService } from "@/services/dashboardServices";
 import CardResumo from "@/app/_components/dashboard/CardResumo";
 import DonutChart from "@/app/_components/dashboard/DonutChart";
 import BarrasHorizontais from "@/app/_components/dashboard/BarrasHorizontais";
 
 export default function DashboardPage() {
+    const usuario = useUsuario();
+    const permissoes = obterPermissoes(usuario?.perfil);
     const [dados, setDados] = useState<Dashboard | null>(null);
     const [erro, setErro] = useState<string | null>(null);
     const [alertaFechado, setAlertaFechado] = useState(false);
@@ -28,16 +32,21 @@ export default function DashboardPage() {
         };
     }, []);
 
-    const acoes = (
-        <>
-            <Link href="/projetos/novo" className={btnPrimario}>
-                <Icon nome="plus" className="h-4 w-4" /> Novo projeto
-            </Link>
-            <Link href="/participantes?aba=cadastrar" className={btnSecundario}>
-                <Icon nome="plus" className="h-4 w-4" /> Novo participante
-            </Link>
-        </>
-    );
+    const acoes =
+        permissoes.gerenciarProjetos || permissoes.gerenciarParticipantes ? (
+            <>
+                {permissoes.gerenciarProjetos && (
+                    <Link href="/projetos/novo" className={btnPrimario}>
+                        <Icon nome="plus" className="h-4 w-4" /> Novo projeto
+                    </Link>
+                )}
+                {permissoes.gerenciarParticipantes && (
+                    <Link href="/participantes?aba=cadastrar" className={btnSecundario}>
+                        <Icon nome="plus" className="h-4 w-4" /> Novo participante
+                    </Link>
+                )}
+            </>
+        ) : undefined;
 
     return (
         <PaginaSistema

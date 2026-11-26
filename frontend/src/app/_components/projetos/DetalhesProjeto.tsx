@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import { btnSecundario } from "@/app/_components/ui/Botoes";
 import Icon from "@/app/_components/ui/Icon";
 import StatusBadge from "@/app/_components/ui/StatusBadge";
 import { formatarData, formatarMoeda } from "@/lib/format";
+import { obterPermissoes } from "@/lib/permissoes";
 import { projetosService, type Projeto } from "@/services/projetoServices";
 import {
     vinculosService,
@@ -27,6 +29,8 @@ interface Dados {
 export default function DetalhesProjeto() {
     const params = useParams<{ codigo: string }>();
     const codigo = decodeURIComponent(params.codigo);
+    const usuario = useUsuario();
+    const permissoes = obterPermissoes(usuario?.perfil);
     const [dados, setDados] = useState<Dados | null>(null);
     const [erro, setErro] = useState<string | null>(null);
 
@@ -80,12 +84,14 @@ export default function DetalhesProjeto() {
                             </div>
                             <div className="flex shrink-0 gap-2">
                                 <Link href="/projetos" className={btnSecundario}>Voltar</Link>
-                                <Link
-                                    href={`/projetos/${encodeURIComponent(projeto.codigo)}/editar`}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                                >
-                                    <Icon nome="pencil" className="h-4 w-4" /> Editar
-                                </Link>
+                                {permissoes.gerenciarProjetos && (
+                                    <Link
+                                        href={`/projetos/${encodeURIComponent(projeto.codigo)}/editar`}
+                                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                                    >
+                                        <Icon nome="pencil" className="h-4 w-4" /> Editar
+                                    </Link>
+                                )}
                             </div>
                         </div>
                         <p className="mt-3 text-sm leading-relaxed text-slate-800">{projeto.descricao}</p>
@@ -94,9 +100,13 @@ export default function DetalhesProjeto() {
                     {/* Equipe */}
                     <SecaoTabela
                         titulo="Equipe"
-                        textoBotao="Vincular participante"
-                        hrefBotao={`/participantes/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
-                        colunas={["Nome", "Tipo", "Função", "Entrada", "Saída", "Ações"]}
+                        textoBotao={permissoes.gerenciarEquipes ? "Vincular participante" : undefined}
+                        hrefBotao={permissoes.gerenciarEquipes ? `/participantes/vincular?projeto=${encodeURIComponent(projeto.codigo)}` : undefined}
+                        colunas={
+                            permissoes.gerenciarEquipes
+                                ? ["Nome", "Tipo", "Função", "Entrada", "Saída", "Ações"]
+                                : ["Nome", "Tipo", "Função", "Entrada", "Saída"]
+                        }
                         vazio="Nenhum participante vinculado."
                         quantidade={dados.equipe.length}
                     >
@@ -107,7 +117,7 @@ export default function DetalhesProjeto() {
                                 <td className="px-3 py-2.5">{m.funcao}</td>
                                 <td className="px-3 py-2.5">{formatarData(m.dataEntrada)}</td>
                                 <td className="px-3 py-2.5">{formatarData(m.dataSaida)}</td>
-                                <td className="px-3 py-2.5"><AcoesLinha /></td>
+                                {permissoes.gerenciarEquipes && <td className="px-3 py-2.5"><AcoesLinha /></td>}
                             </tr>
                         ))}
                     </SecaoTabela>
@@ -115,9 +125,13 @@ export default function DetalhesProjeto() {
                     {/* Financiamentos e Fomento */}
                     <SecaoTabela
                         titulo="Financiamentos e Fomento"
-                        textoBotao="Vincular financiamento"
-                        hrefBotao={`/financiamentos/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
-                        colunas={["Agência", "Tipo de Fomento", "Vínculo", "Vigência", "Valor", "Ações"]}
+                        textoBotao={permissoes.gerenciarFinanciamentos ? "Vincular financiamento" : undefined}
+                        hrefBotao={permissoes.gerenciarFinanciamentos ? `/financiamentos/vincular?projeto=${encodeURIComponent(projeto.codigo)}` : undefined}
+                        colunas={
+                            permissoes.gerenciarFinanciamentos
+                                ? ["Agência", "Tipo de Fomento", "Vínculo", "Vigência", "Valor", "Ações"]
+                                : ["Agência", "Tipo de Fomento", "Vínculo", "Vigência", "Valor"]
+                        }
                         vazio="Nenhum financiamento vinculado."
                         quantidade={dados.financiamentos.length}
                     >
@@ -128,7 +142,7 @@ export default function DetalhesProjeto() {
                                 <td className="px-3 py-2.5">{f.tipoVinculo}</td>
                                 <td className="whitespace-nowrap px-3 py-2.5">{formatarData(f.dataInicio)} a {formatarData(f.dataFim)}</td>
                                 <td className="whitespace-nowrap px-3 py-2.5">{formatarMoeda(f.valor)}</td>
-                                <td className="px-3 py-2.5"><AcoesLinha /></td>
+                                {permissoes.gerenciarFinanciamentos && <td className="px-3 py-2.5"><AcoesLinha /></td>}
                             </tr>
                         ))}
                     </SecaoTabela>
@@ -136,9 +150,13 @@ export default function DetalhesProjeto() {
                     {/* Produções Científicas */}
                     <SecaoTabela
                         titulo="Produções Científicas"
-                        textoBotao="Vincular produção"
-                        hrefBotao={`/producoes/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
-                        colunas={["Título da Produção", "Tipo", "Ano", "Meio de Divulgação", "Ações"]}
+                        textoBotao={permissoes.gerenciarProducoes ? "Vincular produção" : undefined}
+                        hrefBotao={permissoes.gerenciarProducoes ? `/producoes/vincular?projeto=${encodeURIComponent(projeto.codigo)}` : undefined}
+                        colunas={
+                            permissoes.gerenciarProducoes
+                                ? ["Título da Produção", "Tipo", "Ano", "Meio de Divulgação", "Ações"]
+                                : ["Título da Produção", "Tipo", "Ano", "Meio de Divulgação"]
+                        }
                         vazio="Nenhuma produção científica vinculada."
                         quantidade={dados.producoes.length}
                     >
@@ -148,7 +166,7 @@ export default function DetalhesProjeto() {
                                 <td className="px-3 py-2.5">{p.tipo}</td>
                                 <td className="px-3 py-2.5">{p.ano}</td>
                                 <td className="px-3 py-2.5">{p.meioDivulgacao}</td>
-                                <td className="px-3 py-2.5"><AcoesLinha /></td>
+                                {permissoes.gerenciarProducoes && <td className="px-3 py-2.5"><AcoesLinha /></td>}
                             </tr>
                         ))}
                     </SecaoTabela>

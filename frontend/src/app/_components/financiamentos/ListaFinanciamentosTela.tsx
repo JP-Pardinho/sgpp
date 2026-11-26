@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import { btnContorno, btnPrimario, inputBase } from "@/app/_components/ui/Botoes";
 import Icon from "@/app/_components/ui/Icon";
 import { formatarData, formatarMoeda } from "@/lib/format";
+import { obterPermissoes } from "@/lib/permissoes";
 import {
   AGENCIAS_FINANCIADORAS,
   financiamentosService,
@@ -18,6 +20,8 @@ function normalizar(texto: string) {
 }
 
 export default function ListaFinanciamentosTela() {
+  const usuario = useUsuario();
+  const permissoes = obterPermissoes(usuario?.perfil);
   const [financiamentos, setFinanciamentos] = useState<Financiamento[]>([]);
   const [apoios, setApoios] = useState<ApoioFinanceiro[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -77,14 +81,16 @@ export default function ListaFinanciamentosTela() {
         { rotulo: "Financiamentos" },
       ]}
       acoes={
-        <>
-          <Link href="/financiamentos/vincular" className={btnContorno}>
-            Vincular a projeto
-          </Link>
-          <Link href="/financiamentos/novo" className={btnPrimario}>
-            <Icon nome="plus" className="h-4 w-4" /> Novo financiamento
-          </Link>
-        </>
+        permissoes.gerenciarFinanciamentos ? (
+          <>
+            <Link href="/financiamentos/vincular" className={btnContorno}>
+              Vincular a projeto
+            </Link>
+            <Link href="/financiamentos/novo" className={btnPrimario}>
+              <Icon nome="plus" className="h-4 w-4" /> Novo financiamento
+            </Link>
+          </>
+        ) : undefined
       }
     >
       {/* Filtros */}
@@ -157,13 +163,13 @@ export default function ListaFinanciamentosTela() {
                     <th className="px-3 py-2 font-semibold">Vigência</th>
                     <th className="px-3 py-2 font-semibold">Valor total</th>
                     <th className="px-3 py-2 font-semibold">Disponível</th>
-                    <th className="px-3 py-2 font-semibold">Ações</th>
+                    {permissoes.gerenciarFinanciamentos && <th className="px-3 py-2 font-semibold">Ações</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filtrados.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={permissoes.gerenciarFinanciamentos ? 7 : 6} className="px-3 py-8 text-center text-slate-500">
                         Nenhum financiamento encontrado.
                       </td>
                     </tr>
@@ -203,14 +209,16 @@ export default function ListaFinanciamentosTela() {
                             />
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2.5">
-                          <Link
-                            href={`/financiamentos/vincular?financiamento=${f.idFinanciamento}`}
-                            className="text-sm font-medium text-blue-700 hover:underline"
-                          >
-                            Vincular / Saldo
-                          </Link>
-                        </td>
+                        {permissoes.gerenciarFinanciamentos && (
+                          <td className="whitespace-nowrap px-3 py-2.5">
+                            <Link
+                              href={`/financiamentos/vincular?financiamento=${f.idFinanciamento}`}
+                              className="text-sm font-medium text-blue-700 hover:underline"
+                            >
+                              Vincular / Saldo
+                            </Link>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

@@ -22,8 +22,8 @@ builder.Services.AddScoped<IFinanciamentoRepository, FinanciamentoRepository>();
 builder.Services.AddScoped<FinanciamentoServices>();
 builder.Services.AddScoped<IProducaoRepository, ProducaoRepository>();
 builder.Services.AddScoped<ProducaoServices>();
-// Exemplo de como registrar conforme as interfaces forem implementadas:
-// builder.Services.AddScoped<VinculoService>();
+builder.Services.AddScoped<IVinculoRepository, VinculoRepository>();
+builder.Services.AddScoped<VinculoServices>();
 
 // 3. Configuração de CORS para o Front-end Next.js (localhost:3000)
 const string corsPolicyName = "SgppFrontendPolicy";
@@ -50,6 +50,31 @@ builder.Services.AddSwaggerGen(options =>
         Title = "SGPP API",
         Version = "v1",
         Description = "API do Sistema de Gerenciamento de Projetos de Pesquisa (Banco de Dados 1 - Dapper + MySqlConnector)"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "sgpp-session",
+        In = ParameterLocation.Header,
+        Description = "Informe o token de sessão no formato: sgpp-session:{cpf} (ex.: sgpp-session:111.111.111-01)"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 

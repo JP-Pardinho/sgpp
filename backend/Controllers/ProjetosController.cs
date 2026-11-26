@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using sgpp.DTOs;
 using sgpp.Models;
+using sgpp.Security;
 using sgpp.Services;
 
 namespace sgpp.Controllers
@@ -14,15 +16,21 @@ namespace sgpp.Controllers
     public class ProjetosController : ControllerBase
     {
         private readonly ProjetoServices _projetoServices;
+        private readonly VinculoServices _vinculoServices;
         private readonly Func<MySqlConnection> _createConnection;
 
-        public ProjetosController(ProjetoServices projetoServices, Func<MySqlConnection> createConnection)
+        public ProjetosController(
+            ProjetoServices projetoServices,
+            VinculoServices vinculoServices,
+            Func<MySqlConnection> createConnection)
         {
             _projetoServices = projetoServices;
+            _vinculoServices = vinculoServices;
             _createConnection = createConnection;
         }
 
         [HttpPost]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Create([FromBody] Projeto projeto)
         {
             try
@@ -67,6 +75,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPut("{codigo}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Update(string codigo, [FromBody] AtualizarProjetoRequest request)
         {
             try
@@ -96,6 +105,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPatch("{codigo}/situacao")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> UpdateSituacao(string codigo, [FromBody] AtualizarSituacaoRequest request)
         {
             try
@@ -114,6 +124,7 @@ namespace sgpp.Controllers
         }
 
         [HttpDelete("{codigo}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Delete(string codigo)
         {
             try
@@ -134,21 +145,115 @@ namespace sgpp.Controllers
         [HttpGet("{codigo}/participantes")]
         public async Task<IActionResult> GetParticipantes(string codigo)
         {
-            await using var connection = _createConnection();
-            const string sql = @"
-                SELECT pp.participante_cpf AS cpf,
-                       part.nome,
-                       part.tipo,
-                       pp.funcao,
-                       pp.dataEntrada,
-                       pp.dataSaida
-                FROM Projeto_Participante pp
-                JOIN Participante part ON pp.participante_cpf = part.cpf
-                WHERE pp.projeto_codigo = @codigo
-                ORDER BY pp.dataEntrada ASC, part.nome ASC;";
+            try
+            {
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                var equipe = await _vinculoServices.ListarParticipantes(codigoDecodificado);
+                return Ok(equipe);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
 
-            var equipe = await connection.QueryAsync<EquipeMembroResponse>(sql, new { codigo = codigo.Trim() });
-            return Ok(equipe);
+        [HttpPost("{codigo}/participantes")]
+        [ExigirPerfil("Administrador", "Coordenador")]
+        public async Task<IActionResult> VincularParticipante(string codigo, [FromBody] VincularParticipanteRequest? request)
+        {
+            try
+            {
+                if (request is null)
+                {
+                    return BadRequest(new { mensagem = "Os dados do vínculo são obrigatórios." });
+                }
+
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                var cpf = request.participanteCpf ?? request.participante_cpf ?? string.Empty;
+                var criado = await _vinculoServices.VincularParticipante(
+                    codigoDecodificado,
+                    cpf,
+                    request.funcao,
+                    request.dataEntrada,
+                    request.dataSaida);
+
+                return CreatedAtAction(nameof(GetParticipantes), new { codigo = codigoDecodificado }, criado);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return Conflict(new { mensagem = "Este participante já está vinculado ao projeto selecionado." });
+            }
+            catch (MySqlException ex) when (ex.Number == 1452)
+            {
+                return BadRequest(new { mensagem = "Projeto ou participante informado não encontrado." });
+            }
+        }
+
+        [HttpPatch("{codigo}/participantes/{cpf}/saida")]
+        [ExigirPerfil("Administrador", "Coordenador")]
+        public async Task<IActionResult> RegistrarSaida(string codigo, string cpf, [FromBody] RegistrarSaidaRequest? request)
+        {
+            try
+            {
+                if (request is null)
+                {
+                    return BadRequest(new { mensagem = "A data de saída é obrigatória." });
+                }
+
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                var cpfDecodificado = Uri.UnescapeDataString(cpf);
+                var atualizado = await _vinculoServices.RegistrarDataSaida(
+                    codigoDecodificado,
+                    cpfDecodificado,
+                    request.dataSaida);
+
+                return Ok(atualizado);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
+
+        [HttpDelete("{codigo}/participantes/{cpf}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
+        public async Task<IActionResult> RemoverParticipante(string codigo, string cpf)
+        {
+            try
+            {
+                var codigoDecodificado = Uri.UnescapeDataString(codigo);
+                var cpfDecodificado = Uri.UnescapeDataString(cpf);
+                await _vinculoServices.RemoverVinculo(codigoDecodificado, cpfDecodificado);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
         }
 
         [HttpGet("{codigo}/financiamentos")]
@@ -189,16 +294,6 @@ namespace sgpp.Controllers
             var producoes = await connection.QueryAsync<ProducaoVinculadaResponse>(sql, new { codigo = codigo.Trim() });
             return Ok(producoes);
         }
-    }
-
-    public class EquipeMembroResponse
-    {
-        public string cpf { get; set; } = string.Empty;
-        public string nome { get; set; } = string.Empty;
-        public string tipo { get; set; } = string.Empty;
-        public string funcao { get; set; } = string.Empty;
-        public DateTime dataEntrada { get; set; }
-        public DateTime? dataSaida { get; set; }
     }
 
     public class FinanciamentoVinculadoResponse
