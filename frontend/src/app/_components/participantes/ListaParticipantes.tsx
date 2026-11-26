@@ -10,6 +10,7 @@ interface Props {
   participantes: Participante[];
   carregando: boolean;
   erro: string | null;
+  podeExcluir?: boolean;
   onExcluir: (participante: Participante) => Promise<void>;
 }
 
@@ -24,7 +25,7 @@ function normalizar(texto: string) {
   return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-export default function ListaParticipantes({ participantes, carregando, erro, onExcluir }: Props) {
+export default function ListaParticipantes({ participantes, carregando, erro, podeExcluir = true, onExcluir }: Props) {
   const [busca, setBusca] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
   const [excluindoCpf, setExcluindoCpf] = useState<string | null>(null);
@@ -121,13 +122,13 @@ export default function ListaParticipantes({ participantes, carregando, erro, on
                     <th className="px-3 py-2 font-semibold">E-mail institucional</th>
                     <th className="px-3 py-2 font-semibold">CPF</th>
                     <th className="px-3 py-2 font-semibold">Tipo</th>
-                    <th className="px-3 py-2 font-semibold">Ações</th>
+                    {podeExcluir && <th className="px-3 py-2 font-semibold">Ações</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filtrados.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={podeExcluir ? 5 : 4} className="px-3 py-8 text-center text-slate-500">
                         Nenhum participante encontrado.
                       </td>
                     </tr>
@@ -149,18 +150,20 @@ export default function ListaParticipantes({ participantes, carregando, erro, on
                             {p.tipo}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5">
-                          <button
-                            type="button"
-                            disabled={excluindoCpf === p.cpf}
-                            onClick={() => confirmarExclusao(p)}
-                            title="Excluir"
-                            aria-label={`Excluir ${p.nome}`}
-                            className="text-slate-500 transition-colors hover:text-red-600 disabled:opacity-50"
-                          >
-                            <Icon nome="trash" className="h-[18px] w-[18px]" />
-                          </button>
-                        </td>
+                        {podeExcluir && (
+                          <td className="px-3 py-2.5">
+                            <button
+                              type="button"
+                              disabled={excluindoCpf === p.cpf}
+                              onClick={() => confirmarExclusao(p)}
+                              title="Excluir"
+                              aria-label={`Excluir ${p.nome}`}
+                              className="text-slate-500 transition-colors hover:text-red-600 disabled:opacity-50"
+                            >
+                              <Icon nome="trash" className="h-[18px] w-[18px]" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

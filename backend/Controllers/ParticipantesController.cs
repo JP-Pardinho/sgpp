@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using sgpp.Models;
+using sgpp.Security;
 using sgpp.Services;
 
 namespace sgpp.Controllers
@@ -20,6 +21,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPost]
+        [ExigirPerfil("Administrador")]
         public async Task<IActionResult> Create([FromBody] Participante participante)
         {
             try
@@ -61,6 +63,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPut("{cpf}")]
+        [ExigirPerfil("Administrador")]
         public async Task<IActionResult> Update(string cpf, [FromBody] AtualizarParticipanteRequest request)
         {
             try
@@ -96,6 +99,7 @@ namespace sgpp.Controllers
         }
 
         [HttpDelete("{cpf}")]
+        [ExigirPerfil("Administrador")]
         public async Task<IActionResult> Delete(string cpf)
         {
             try

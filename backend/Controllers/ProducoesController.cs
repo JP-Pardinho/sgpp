@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using sgpp.DTOs;
 using sgpp.Models;
+using sgpp.Security;
 using sgpp.Services;
 
 namespace sgpp.Controllers
@@ -20,6 +22,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPost]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Create([FromBody] ProducaoCientifica producao)
         {
             try
@@ -64,6 +67,7 @@ namespace sgpp.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Update(int id, [FromBody] AtualizarProducaoRequest request)
         {
             try
@@ -92,11 +96,78 @@ namespace sgpp.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
                 await _producaoServices.Delete(id);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
+
+        [HttpPost("{id:int}/vincular")]
+        [ExigirPerfil("Administrador", "Coordenador")]
+        public async Task<IActionResult> Vincular(int id, [FromBody] VincularProducaoRequest? request)
+        {
+            try
+            {
+                var codigoProjeto = request?.projetoCodigo ?? request?.projeto_codigo;
+                var atualizada = await _producaoServices.Vincular(id, codigoProjeto, request?.autoresCpfs);
+                return Ok(atualizada);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1452)
+            {
+                return BadRequest(new { mensagem = "Projeto ou autor informado não encontrado no banco de dados." });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return Conflict(new { mensagem = "Autor já vinculado a esta produção científica." });
+            }
+        }
+
+        [HttpGet("{id:int}/autores")]
+        public async Task<IActionResult> GetAutores(int id)
+        {
+            try
+            {
+                var autores = await _producaoServices.ListarAutores(id);
+                return Ok(autores);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id:int}/autores/{cpf}")]
+        [ExigirPerfil("Administrador", "Coordenador")]
+        public async Task<IActionResult> RemoveAutor(int id, string cpf)
+        {
+            try
+            {
+                var cpfDecodificado = Uri.UnescapeDataString(cpf);
+                await _producaoServices.RemoverAutor(id, cpfDecodificado);
                 return NoContent();
             }
             catch (KeyNotFoundException ex)
