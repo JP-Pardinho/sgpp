@@ -7,7 +7,8 @@ import { projetosService, type Projeto } from "@/services/projetoServices";
 import ProjetoForm from "./ProjetoForm";
 
 export default function EditarProjeto() {
-    const { codigo } = useParams<{ codigo: string }>();
+    const params = useParams<{ codigo: string }>();
+    const codigo = decodeURIComponent(params.codigo);
     const [projeto, setProjeto] = useState<Projeto | null>(null);
     const [erro, setErro] = useState<string | null>(null);
 

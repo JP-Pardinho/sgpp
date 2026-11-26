@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using sgpp.Models;
@@ -13,10 +14,12 @@ namespace sgpp.Controllers
     public class ProjetosController : ControllerBase
     {
         private readonly ProjetoServices _projetoServices;
+        private readonly Func<MySqlConnection> _createConnection;
 
-        public ProjetosController(ProjetoServices projetoServices)
+        public ProjetosController(ProjetoServices projetoServices, Func<MySqlConnection> createConnection)
         {
             _projetoServices = projetoServices;
+            _createConnection = createConnection;
         }
 
         [HttpPost]
@@ -127,6 +130,95 @@ namespace sgpp.Controllers
                 return BadRequest(new { mensagem = ex.Message });
             }
         }
+
+        [HttpGet("{codigo}/participantes")]
+        public async Task<IActionResult> GetParticipantes(string codigo)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT pp.participante_cpf AS cpf,
+                       part.nome,
+                       part.tipo,
+                       pp.funcao,
+                       pp.dataEntrada,
+                       pp.dataSaida
+                FROM Projeto_Participante pp
+                JOIN Participante part ON pp.participante_cpf = part.cpf
+                WHERE pp.projeto_codigo = @codigo
+                ORDER BY pp.dataEntrada ASC, part.nome ASC;";
+
+            var equipe = await connection.QueryAsync<EquipeMembroResponse>(sql, new { codigo = codigo.Trim() });
+            return Ok(equipe);
+        }
+
+        [HttpGet("{codigo}/financiamentos")]
+        public async Task<IActionResult> GetFinanciamentos(string codigo)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT f.id_financiamento AS idFinanciamento,
+                       f.agenciaFinanciadora AS agencia,
+                       f.tipoFomento,
+                       af.tipoVinculo,
+                       f.dataInicio,
+                       f.dataFim,
+                       af.valorDestinado AS valor
+                FROM Apoio_Financeiro af
+                JOIN Financiamento f ON af.id_financiamento = f.id_financiamento
+                WHERE af.projeto_codigo = @codigo
+                ORDER BY f.dataInicio DESC;";
+
+            var financiamentos = await connection.QueryAsync<FinanciamentoVinculadoResponse>(sql, new { codigo = codigo.Trim() });
+            return Ok(financiamentos);
+        }
+
+        [HttpGet("{codigo}/producoes")]
+        public async Task<IActionResult> GetProducoes(string codigo)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT id_producao AS id,
+                       titulo,
+                       tipoProducao AS tipo,
+                       anoPublicacao AS ano,
+                       meioDivulgacao
+                FROM Producao_Cientifica
+                WHERE projeto_codigo = @codigo
+                ORDER BY anoPublicacao DESC, titulo ASC;";
+
+            var producoes = await connection.QueryAsync<ProducaoVinculadaResponse>(sql, new { codigo = codigo.Trim() });
+            return Ok(producoes);
+        }
+    }
+
+    public class EquipeMembroResponse
+    {
+        public string cpf { get; set; } = string.Empty;
+        public string nome { get; set; } = string.Empty;
+        public string tipo { get; set; } = string.Empty;
+        public string funcao { get; set; } = string.Empty;
+        public DateTime dataEntrada { get; set; }
+        public DateTime? dataSaida { get; set; }
+    }
+
+    public class FinanciamentoVinculadoResponse
+    {
+        public int idFinanciamento { get; set; }
+        public string agencia { get; set; } = string.Empty;
+        public string tipoFomento { get; set; } = string.Empty;
+        public string tipoVinculo { get; set; } = string.Empty;
+        public DateTime dataInicio { get; set; }
+        public DateTime dataFim { get; set; }
+        public decimal valor { get; set; }
+    }
+
+    public class ProducaoVinculadaResponse
+    {
+        public int id { get; set; }
+        public string titulo { get; set; } = string.Empty;
+        public string tipo { get; set; } = string.Empty;
+        public int ano { get; set; }
+        public string meioDivulgacao { get; set; } = string.Empty;
     }
 
     public class AtualizarProjetoRequest

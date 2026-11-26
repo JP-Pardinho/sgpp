@@ -46,7 +46,7 @@ export default function ProjetoForm({ modo, inicial }: Props) {
             : null;
 
     const formularioValido =
-        codigo.trim() !== "" &&
+        (modo === "criar" || codigo.trim() !== "") &&
         titulo.trim() !== "" &&
         dataInicio !== "" &&
         dataFim !== "" &&
@@ -97,15 +97,19 @@ export default function ProjetoForm({ modo, inicial }: Props) {
                     <label htmlFor="codigo" className={rotulo}>Código</label>
                     <input
                         id="codigo"
-                        required
+                        required={modo === "editar"}
                         maxLength={30}
                         value={codigo}
                         onChange={(e) => setCodigo(e.target.value)}
                         disabled={modo === "editar"}
-                        placeholder="PRJ-2026-022"
+                        placeholder="Gerado automaticamente"
                         className={inputBase}
                     />
-                    <p className={dica}>Identificador único</p>
+                    <p className={dica}>
+                        {modo === "criar"
+                            ? "Opcional — deixe em branco para gerar um código de forma automática"
+                            : "Identificador único"}
+                    </p>
                 </div>
                 <div>
                     <label htmlFor="titulo" className={rotulo}>Título</label>

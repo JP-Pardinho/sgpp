@@ -50,23 +50,35 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// 5. Pipeline HTTP
-if (app.Environment.IsDevelopment())
+// 5. Pipeline HTTP (Swagger sempre ativo para facilitar os testes locais)
+app.Use(async (context, next) =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    try
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SGPP API v1");
-        options.RoutePrefix = "swagger"; // Acesso em http://localhost:5150/swagger
-    });
-}
+        await next();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Erro não tratado em {Method} {Path}", context.Request.Method, context.Request.Path);
+        if (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                mensagem = ex.Message,
+                tipo = ex.GetType().Name
+            });
+        }
+    }
+});
 
-// Em desenvolvimento local com Next.js via HTTP, evite UseHttpsRedirection()
-// se não houver certificado HTTPS configurado, para não quebrar o preflight CORS.
-if (!app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseHttpsRedirection();
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "SGPP API v1");
+    options.RoutePrefix = "swagger"; // Acesso em http://localhost:5000/swagger
+});
 
 app.UseCors(corsPolicyName);
 app.UseAuthorization();

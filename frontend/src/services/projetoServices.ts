@@ -56,15 +56,38 @@ function aplicarFiltros(projetos: Projeto[], filtros: FiltrosProjeto): Resultado
   };
 }
 
-async function listar(): Promise<Projeto[]> {
-  return USE_MOCK ? mockApi.listarProjetos() : apiFetch<Projeto[]>("/projetos");
+async function listar(filtros?: Pick<FiltrosProjeto, "busca" | "situacao" | "coordenador_cpf">): Promise<Projeto[]> {
+  if (USE_MOCK) {
+    return mockApi.listarProjetos();
+  }
+
+  const params = new URLSearchParams();
+  if (filtros?.busca?.trim()) params.set("busca", filtros.busca.trim());
+  if (filtros?.situacao?.trim()) params.set("situacao", filtros.situacao.trim());
+  if (filtros?.coordenador_cpf?.trim()) params.set("coordenador_cpf", filtros.coordenador_cpf.trim());
+
+  const query = params.toString();
+  return apiFetch<Projeto[]>(query ? `/projetos?${query}` : "/projetos");
 }
 
 export const projetosService = {
   listar,
 
-  listarComFiltros: async (filtros: FiltrosProjeto = {}) =>
-    aplicarFiltros(await listar(), filtros),
+  listarComFiltros: async (filtros: FiltrosProjeto = {}) => {
+    const projetos = await listar(filtros);
+    if (USE_MOCK) {
+      return aplicarFiltros(projetos, filtros);
+    }
+
+    const { pagina = 1, tamanhoPagina = 8 } = filtros;
+    const inicio = (pagina - 1) * tamanhoPagina;
+    return {
+      itens: projetos.slice(inicio, inicio + tamanhoPagina),
+      total: projetos.length,
+      pagina,
+      tamanhoPagina,
+    };
+  },
 
   buscarPorCodigo: (codigo: string) =>
     USE_MOCK

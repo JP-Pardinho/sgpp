@@ -110,10 +110,14 @@ export const mockApi = {
   },
 
   criarProjeto: async (projeto: Projeto) => {
-    if (projetos.some((p) => p.codigo === projeto.codigo)) {
+    const ano = projeto.dataInicio?.slice(0, 4) || String(new Date().getFullYear());
+    const codigoFinal =
+      projeto.codigo.trim() ||
+      `PRJ-${ano}-${String(projetos.length + 1).padStart(3, "0")}`;
+    if (projetos.some((p) => p.codigo === codigoFinal)) {
       throw new Error("Já existe um projeto com este código.");
     }
-    const novo = { ...projeto, coordenador_nome: nomeDe(projeto.coordenador_cpf ?? "") };
+    const novo = { ...projeto, codigo: codigoFinal, coordenador_nome: nomeDe(projeto.coordenador_cpf ?? "") };
     projetos.unshift(novo);
     return atraso(novo);
   },

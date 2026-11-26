@@ -132,5 +132,33 @@ namespace sgpp.Repositories
 
             await connection.ExecuteAsync(sql, new { projetoCodigo, participanteCpf, funcao, dataEntrada });
         }
+
+        public async Task<string> GerarProximoCodigo(int ano)
+        {
+            await using var connection = _createConnection();
+            var prefixo = $"PRJ-{ano}-";
+            const string sql = @"
+                SELECT codigo
+                FROM Projeto
+                WHERE codigo LIKE @padrao;";
+
+            var codigos = await connection.QueryAsync<string>(sql, new { padrao = $"{prefixo}%" });
+
+            var maiorNumero = 0;
+            foreach (var c in codigos)
+            {
+                var trimmed = c.Trim();
+                if (trimmed.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase))
+                {
+                    var sufixo = trimmed[prefixo.Length..];
+                    if (int.TryParse(sufixo, out var numero) && numero > maiorNumero)
+                    {
+                        maiorNumero = numero;
+                    }
+                }
+            }
+
+            return $"{prefixo}{(maiorNumero + 1):D3}";
+        }
     }
 }
