@@ -2,9 +2,9 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Dapper;
 using Microsoft.AspNetCore.Mvc;
-using MySqlConnector;
+using sgpp.DTOs;
+using sgpp.Repositories.Interfaces;
 
 namespace sgpp.Controllers
 {
@@ -12,83 +12,66 @@ namespace sgpp.Controllers
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly Func<MySqlConnection> _createConnection;
+        private readonly IParticipanteRepository _participanteRepository;
 
-        public AuthController(Func<MySqlConnection> createConnection)
+        public AuthController(IParticipanteRepository participanteRepository)
         {
-            _createConnection = createConnection;
+            _participanteRepository = participanteRepository;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (request is null || string.IsNullOrWhiteSpace(request.email) || string.IsNullOrWhiteSpace(request.senha))
+            if (request is null ||
+                string.IsNullOrWhiteSpace(request.emailInstitucional) ||
+                string.IsNullOrWhiteSpace(request.senha))
             {
-                return BadRequest(new { mensagem = "E-mail e senha são obrigatórios." });
+                return BadRequest(new { mensagem = "Informe o e-mail institucional e a senha." });
             }
 
-            await using var connection = _createConnection();
-            const string sql = @"
-                SELECT cpf, nome, emailInstitucional, senhaHash, perfilAcesso
-                FROM Participante
-                WHERE LOWER(emailInstitucional) = LOWER(@email)
-                LIMIT 1;";
+            var emailNormalizado = request.emailInstitucional.Trim().ToLowerInvariant();
+            var participante = await _participanteRepository.GetByEmail(emailNormalizado);
 
-            var usuario = await connection.QueryFirstOrDefaultAsync<ParticipanteAuthRow>(sql, new
+            if (participante is null || !SenhaValida(request.senha, participante.senhaHash))
             {
-                email = request.email.Trim()
-            });
-
-            if (usuario is null || !SenhaValida(request.senha, usuario.senhaHash))
-            {
-                return Unauthorized(new { mensagem = "E-mail ou senha inválidos." });
+                return Unauthorized(new { mensagem = "E-mail institucional ou senha inválidos." });
             }
 
-            var tokenPayload = $"{usuario.cpf}:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-            var token = Convert.ToBase64String(Encoding.UTF8.GetBytes(tokenPayload));
-
-            return Ok(new
+            var resposta = new LoginResponse
             {
-                token,
-                usuario = new
-                {
-                    nome = usuario.nome,
-                    perfil = usuario.perfilAcesso,
-                    email = usuario.emailInstitucional
-                }
-            });
+                cpf = participante.cpf,
+                nome = participante.nome,
+                emailInstitucional = participante.emailInstitucional,
+                tipo = participante.tipo,
+                perfilAcesso = participante.perfilAcesso ?? "Participante"
+            };
+
+            return Ok(resposta);
         }
 
-        private static bool SenhaValida(string senhaInformada, string? senhaArmazenada)
+        private static bool SenhaValida(string senhaInformada, string? senhaHashArmazenada)
         {
-            if (string.IsNullOrEmpty(senhaArmazenada))
+            if (string.IsNullOrWhiteSpace(senhaHashArmazenada))
             {
                 return false;
             }
 
-            if (string.Equals(senhaInformada, senhaArmazenada, StringComparison.Ordinal))
+            var informadaBytes = Encoding.UTF8.GetBytes(senhaInformada);
+            var armazenadaBytes = Encoding.UTF8.GetBytes(senhaHashArmazenada);
+
+            if (informadaBytes.Length == armazenadaBytes.Length &&
+                CryptographicOperations.FixedTimeEquals(informadaBytes, armazenadaBytes))
             {
                 return true;
             }
 
-            var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(senhaInformada));
-            var hashHex = Convert.ToHexString(hashBytes);
-            return string.Equals(hashHex, senhaArmazenada, StringComparison.OrdinalIgnoreCase);
-        }
+            // Também suporta senhas armazenadas como hash SHA-256 em hexadecimal
+            var sha256Hex = Convert.ToHexString(SHA256.HashData(informadaBytes));
+            var sha256Bytes = Encoding.UTF8.GetBytes(sha256Hex);
+            var armazenadaUpperBytes = Encoding.UTF8.GetBytes(senhaHashArmazenada.Trim().ToUpperInvariant());
 
-        private sealed class ParticipanteAuthRow
-        {
-            public string cpf { get; set; } = string.Empty;
-            public string nome { get; set; } = string.Empty;
-            public string emailInstitucional { get; set; } = string.Empty;
-            public string senhaHash { get; set; } = string.Empty;
-            public string perfilAcesso { get; set; } = string.Empty;
+            return sha256Bytes.Length == armazenadaUpperBytes.Length &&
+                   CryptographicOperations.FixedTimeEquals(sha256Bytes, armazenadaUpperBytes);
         }
-    }
-
-    public class LoginRequest
-    {
-        public string email { get; set; } = string.Empty;
-        public string senha { get; set; } = string.Empty;
     }
 }

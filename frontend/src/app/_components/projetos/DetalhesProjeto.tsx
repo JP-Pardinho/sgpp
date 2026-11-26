@@ -31,6 +31,7 @@ export default function DetalhesProjeto() {
     const [erro, setErro] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!codigo) return;
         let ativo = true;
         Promise.all([
             projetosService.buscarPorCodigo(codigo),
@@ -94,6 +95,7 @@ export default function DetalhesProjeto() {
                     <SecaoTabela
                         titulo="Equipe"
                         textoBotao="Vincular participante"
+                        hrefBotao={`/participantes/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
                         colunas={["Nome", "Tipo", "Função", "Entrada", "Saída", "Ações"]}
                         vazio="Nenhum participante vinculado."
                         quantidade={dados.equipe.length}
@@ -114,6 +116,7 @@ export default function DetalhesProjeto() {
                     <SecaoTabela
                         titulo="Financiamentos e Fomento"
                         textoBotao="Vincular financiamento"
+                        hrefBotao={`/financiamentos/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
                         colunas={["Agência", "Tipo de Fomento", "Vínculo", "Vigência", "Valor", "Ações"]}
                         vazio="Nenhum financiamento vinculado."
                         quantidade={dados.financiamentos.length}
@@ -134,6 +137,7 @@ export default function DetalhesProjeto() {
                     <SecaoTabela
                         titulo="Produções Científicas"
                         textoBotao="Vincular produção"
+                        hrefBotao={`/producoes/vincular?projeto=${encodeURIComponent(projeto.codigo)}`}
                         colunas={["Título da Produção", "Tipo", "Ano", "Meio de Divulgação", "Ações"]}
                         vazio="Nenhuma produção científica vinculada."
                         quantidade={dados.producoes.length}

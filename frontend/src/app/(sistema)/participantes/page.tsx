@@ -1,17 +1,11 @@
-import PaginaSistema from "@/app/_components/layout/PaginaSistema";
+import { Suspense } from "react";
+import ParticipantesTela from "@/app/_components/participantes/ParticipantesTela";
 
+// Tela 5.7 - Cadastrar e Listar Participantes (/participantes)
 export default function ParticipantesPage() {
-    return (
-        <PaginaSistema
-            titulo="Participantes"
-            breadcrumb={[
-                { rotulo: "Início", href: "/" },
-                { rotulo: "Participantes" },
-            ]}
-        >
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm text-slate-600">Página de participantes em desenvolvimento.</p>
-            </div>
-        </PaginaSistema>
-    );
+  return (
+    <Suspense fallback={null}>
+      <ParticipantesTela />
+    </Suspense>
+  );
 }

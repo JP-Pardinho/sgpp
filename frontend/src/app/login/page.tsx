@@ -21,15 +21,14 @@ export default function LoginPage() {
         setErro(null);
         setEnviando(true);
         try {
-            const resposta = await authService.login({ email: email.trim(), senha });
+            const resposta = await authService.login({ emailInstitucional: email.trim(), senha });
             salvarSessao({ token: resposta.token, usuario: resposta.usuario }, lembrar);
             router.replace("/");
         } catch (err) {
-            const naoAutorizado = err instanceof ApiError && (err.status === 400 || err.status === 401);
             setErro(
-                naoAutorizado
-                    ? "E-mail ou senha inválidos."
-                    : err instanceof Error && !(err instanceof ApiError)
+                err instanceof ApiError
+                    ? err.message
+                    : err instanceof Error
                         ? err.message
                         : "Não foi possível acessar o sistema. Tente novamente.",
             );

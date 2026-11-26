@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+using MySqlConnector;
 using Microsoft.OpenApi.Models;
 using sgpp.Repositories;
 using sgpp.Repositories.Interfaces;
@@ -16,8 +16,13 @@ builder.Services.AddSingleton<Func<MySqlConnection>>(_ => () => new MySqlConnect
 // 2. Registro de Repositórios e Serviços (Injeção de Dependência)
 builder.Services.AddScoped<IProjetoRepository, ProjetoRepository>();
 builder.Services.AddScoped<ProjetoServices>();
+builder.Services.AddScoped<IParticipanteRepository, ParticipanteRepository>();
+builder.Services.AddScoped<ParticipanteServices>();
+builder.Services.AddScoped<IFinanciamentoRepository, FinanciamentoRepository>();
+builder.Services.AddScoped<FinanciamentoServices>();
+builder.Services.AddScoped<IProducaoRepository, ProducaoRepository>();
+builder.Services.AddScoped<ProducaoServices>();
 // Exemplo de como registrar conforme as interfaces forem implementadas:
-// builder.Services.AddScoped<IParticipanteRepository, ParticipanteRepository>();
 // builder.Services.AddScoped<VinculoService>();
 
 // 3. Configuração de CORS para o Front-end Next.js (localhost:3000)

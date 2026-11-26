@@ -35,10 +35,20 @@ export async function apiFetch<T>(endpoint: string, options?: RequestInit): Prom
 
     let mensagem = `Erro na requisição (${response.status}): ${response.statusText}`;
     try {
-      const corpo = (await response.json()) as { mensagem?: string; message?: string; title?: string };
-      mensagem = corpo.mensagem ?? corpo.message ?? corpo.title ?? mensagem;
+      const corpo = (await response.json()) as {
+        mensagem?: string;
+        message?: string;
+        title?: string;
+      };
+      if (corpo?.mensagem) {
+        mensagem = corpo.mensagem;
+      } else if (corpo?.message) {
+        mensagem = corpo.message;
+      } else if (corpo?.title) {
+        mensagem = corpo.title;
+      }
     } catch {
-      // mantém mensagem padrão se o corpo não for JSON
+      // Mantém a mensagem padrão caso a resposta não seja JSON.
     }
 
     throw new ApiError(response.status, mensagem);

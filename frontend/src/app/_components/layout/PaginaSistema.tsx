@@ -27,7 +27,7 @@ export default function PaginaSistema({ titulo, breadcrumb, acoes, children }: P
           {breadcrumb.map((item, i) => {
             const ultimo = i === breadcrumb.length - 1;
             return (
-              <span key={item.rotulo}>
+              <span key={`${i}-${item.rotulo ?? ""}`}>
                 {item.href && !ultimo ? (
                   <Link href={item.href} className="hover:text-sgpp-700 hover:underline">
                     {item.rotulo}

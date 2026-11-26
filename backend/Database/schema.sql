@@ -1,3 +1,4 @@
+DROP DATABASE IF EXISTS sgpp_db;
 CREATE DATABASE sgpp_db;
 USE sgpp_db;
 

@@ -13,6 +13,7 @@ export default function EditarProjeto() {
     const [erro, setErro] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!codigo) return;
         let ativo = true;
         projetosService
             .buscarPorCodigo(codigo)
@@ -29,7 +30,10 @@ export default function EditarProjeto() {
             breadcrumb={[
                 { rotulo: "Início", href: "/" },
                 { rotulo: "Projetos", href: "/projetos" },
-                { rotulo: codigo, href: `/projetos/${codigo}` },
+                {
+                    rotulo: codigo ? decodeURIComponent(codigo) : "Projeto",
+                    href: codigo ? `/projetos/${encodeURIComponent(codigo)}` : "/projetos",
+                },
                 { rotulo: "Editar" },
             ]}
         >

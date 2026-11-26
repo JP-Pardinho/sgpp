@@ -33,7 +33,7 @@ export default function DashboardPage() {
             <Link href="/projetos/novo" className={btnPrimario}>
                 <Icon nome="plus" className="h-4 w-4" /> Novo projeto
             </Link>
-            <Link href="/participantes/novo" className={btnSecundario}>
+            <Link href="/participantes?aba=cadastrar" className={btnSecundario}>
                 <Icon nome="plus" className="h-4 w-4" /> Novo participante
             </Link>
         </>

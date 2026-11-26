@@ -1,17 +1,6 @@
-import PaginaSistema from "@/app/_components/layout/PaginaSistema";
+import ConsultasTela from "@/app/_components/consultas/ConsultasTela";
 
+// Tela 5.12 - Realizar Consulta no Sistema (/consultas)
 export default function ConsultasPage() {
-    return (
-        <PaginaSistema
-            titulo="Consultas"
-            breadcrumb={[
-                { rotulo: "Início", href: "/" },
-                { rotulo: "Consultas" },
-            ]}
-        >
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm text-slate-600">Página de consultas em desenvolvimento.</p>
-            </div>
-        </PaginaSistema>
-    );
+  return <ConsultasTela />;
 }

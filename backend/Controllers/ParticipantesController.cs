@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
 using sgpp.Models;
+using sgpp.Services;
 
 namespace sgpp.Controllers
 {
@@ -11,29 +12,117 @@ namespace sgpp.Controllers
     [Route("api/participantes")]
     public class ParticipantesController : ControllerBase
     {
-        private readonly Func<MySqlConnection> _createConnection;
+        private readonly ParticipanteServices _participanteServices;
 
-        public ParticipantesController(Func<MySqlConnection> createConnection)
+        public ParticipantesController(ParticipanteServices participanteServices)
         {
-            _createConnection = createConnection;
+            _participanteServices = participanteServices;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] Participante participante)
+        {
+            try
+            {
+                var criado = await _participanteServices.Create(participante);
+                return CreatedAtAction(nameof(GetByCpf), new { cpf = criado.cpf }, criado);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return Conflict(new { mensagem = "Já existe um participante cadastrado com este CPF ou e-mail institucional." });
+            }
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? tipo = null)
+        public async Task<IActionResult> GetAll([FromQuery] string? tipo)
         {
-            await using var connection = _createConnection();
-            var sql = @"
-                SELECT cpf, nome, emailInstitucional AS email, tipo
-                FROM Participante
-                WHERE (@tipo IS NULL OR LOWER(tipo) = LOWER(@tipo))
-                ORDER BY nome ASC;";
-
-            var participantes = await connection.QueryAsync<Participante>(sql, new
-            {
-                tipo = string.IsNullOrWhiteSpace(tipo) ? null : tipo.Trim()
-            });
-
+            var participantes = await _participanteServices.GetAll(tipo);
             return Ok(participantes);
         }
+
+        [HttpGet("{cpf}")]
+        public async Task<IActionResult> GetByCpf(string cpf)
+        {
+            var participante = await _participanteServices.GetByCpf(cpf);
+            if (participante is null)
+            {
+                return NotFound(new { mensagem = $"Participante com CPF '{cpf}' não encontrado." });
+            }
+
+            return Ok(participante);
+        }
+
+        [HttpPut("{cpf}")]
+        public async Task<IActionResult> Update(string cpf, [FromBody] AtualizarParticipanteRequest request)
+        {
+            try
+            {
+                var participante = new Participante
+                {
+                    cpf = cpf,
+                    nome = request.nome,
+                    emailInstitucional = request.emailInstitucional,
+                    tipo = request.tipo,
+                    perfilAcesso = request.perfilAcesso
+                };
+
+                var atualizado = await _participanteServices.Update(cpf, participante);
+                return Ok(atualizado);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                return Conflict(new { mensagem = "Já existe um participante cadastrado com este e-mail institucional." });
+            }
+        }
+
+        [HttpDelete("{cpf}")]
+        public async Task<IActionResult> Delete(string cpf)
+        {
+            try
+            {
+                await _participanteServices.Delete(cpf);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { mensagem = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { mensagem = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number == 1451)
+            {
+                return Conflict(new { mensagem = "Não é possível excluir o participante pois ele está vinculado como coordenador de um ou mais projetos." });
+            }
+        }
+    }
+
+    public class AtualizarParticipanteRequest
+    {
+        public string nome { get; set; } = string.Empty;
+        public string emailInstitucional { get; set; } = string.Empty;
+        public string tipo { get; set; } = string.Empty;
+        public string? perfilAcesso { get; set; }
     }
 }
