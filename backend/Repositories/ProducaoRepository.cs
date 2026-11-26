@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dapper;
@@ -112,6 +113,123 @@ namespace sgpp.Repositories
 
             var total = await connection.ExecuteScalarAsync<int>(sql, new { codigo });
             return total > 0;
+        }
+
+        public async Task<bool> AtualizarProjetoCodigo(int idProducao, string projetoCodigo)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                UPDATE Producao_Cientifica
+                SET projeto_codigo = @projetoCodigo
+                WHERE id_producao = @id;";
+
+            var linhasAfetadas = await connection.ExecuteAsync(sql, new { id = idProducao, projetoCodigo });
+            return linhasAfetadas > 0;
+        }
+
+        public async Task<IEnumerable<AutorProducao>> ListarAutores(int idProducao)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT p.cpf, p.nome, p.emailInstitucional, p.tipo
+                FROM Producao_Autor pa
+                JOIN Participante p ON pa.participante_cpf = p.cpf
+                WHERE pa.producao_id = @idProducao
+                ORDER BY p.nome ASC;";
+
+            return await connection.QueryAsync<AutorProducao>(sql, new { idProducao });
+        }
+
+        public async Task<Dictionary<int, List<AutorProducao>>> ListarAutoresPorProducoes(IEnumerable<int> idsProducoes)
+        {
+            var ids = idsProducoes.Distinct().ToList();
+            var resultado = new Dictionary<int, List<AutorProducao>>();
+            if (ids.Count == 0)
+            {
+                return resultado;
+            }
+
+            await using var connection = _createConnection();
+            const string sql = @"
+                SELECT pa.producao_id, p.cpf, p.nome, p.emailInstitucional, p.tipo
+                FROM Producao_Autor pa
+                JOIN Participante p ON pa.participante_cpf = p.cpf
+                WHERE pa.producao_id IN @ids
+                ORDER BY p.nome ASC;";
+
+            var linhas = await connection.QueryAsync<ProducaoAutorRow>(sql, new { ids });
+            foreach (var linha in linhas)
+            {
+                if (!resultado.TryGetValue(linha.producao_id, out var lista))
+                {
+                    lista = new List<AutorProducao>();
+                    resultado[linha.producao_id] = lista;
+                }
+
+                lista.Add(new AutorProducao
+                {
+                    cpf = linha.cpf,
+                    nome = linha.nome,
+                    emailInstitucional = linha.emailInstitucional,
+                    tipo = linha.tipo
+                });
+            }
+
+            return resultado;
+        }
+
+        public async Task InserirAutor(int idProducao, string participanteCpf)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                INSERT IGNORE INTO Producao_Autor (producao_id, participante_cpf)
+                VALUES (@idProducao, @participanteCpf);";
+
+            await connection.ExecuteAsync(sql, new { idProducao, participanteCpf });
+        }
+
+        public async Task SincronizarAutores(int idProducao, IEnumerable<string> cpfsAutores)
+        {
+            await using var connection = _createConnection();
+            await connection.OpenAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
+
+            const string deleteSql = @"
+                DELETE FROM Producao_Autor
+                WHERE producao_id = @idProducao;";
+
+            await connection.ExecuteAsync(deleteSql, new { idProducao }, transaction);
+
+            const string insertSql = @"
+                INSERT IGNORE INTO Producao_Autor (producao_id, participante_cpf)
+                VALUES (@idProducao, @participanteCpf);";
+
+            foreach (var cpf in cpfsAutores)
+            {
+                await connection.ExecuteAsync(insertSql, new { idProducao, participanteCpf = cpf }, transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+
+        public async Task<bool> RemoverAutor(int idProducao, string participanteCpf)
+        {
+            await using var connection = _createConnection();
+            const string sql = @"
+                DELETE FROM Producao_Autor
+                WHERE producao_id = @idProducao AND participante_cpf = @participanteCpf;";
+
+            var linhasAfetadas = await connection.ExecuteAsync(sql, new { idProducao, participanteCpf });
+            return linhasAfetadas > 0;
+        }
+
+        private sealed class ProducaoAutorRow
+        {
+            public int producao_id { get; set; }
+            public string cpf { get; set; } = string.Empty;
+            public string nome { get; set; } = string.Empty;
+            public string emailInstitucional { get; set; } = string.Empty;
+            public string tipo { get; set; } = string.Empty;
         }
     }
 }

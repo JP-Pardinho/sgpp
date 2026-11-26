@@ -248,7 +248,7 @@ namespace sgpp.Services
             }
         }
 
-        // RNF06: Validação completa de CPF (formato, sequência repetida e dígitos verificadores módulo 11)
+        // RNF06: Validação de formato de CPF (aceita CPFs fictícios com 11 dígitos)
         private static string ValidarEFormatarCpf(string? cpf)
         {
             if (string.IsNullOrWhiteSpace(cpf))
@@ -263,42 +263,7 @@ namespace sgpp.Services
             }
 
             var digitos = ExtrairDigitos(cpfTrim);
-            if (!CpfDigitosValidos(digitos))
-            {
-                throw new ArgumentException("CPF inválido. Verifique os dígitos informados.");
-            }
-
             return FormatarCpf(digitos);
-        }
-
-        private static bool CpfDigitosValidos(string digitos)
-        {
-            if (digitos.Length != 11)
-            {
-                return false;
-            }
-
-            if (digitos.All(c => c == digitos[0]))
-            {
-                return false;
-            }
-
-            var d1 = CalcularDigitoVerificador(digitos, 9, 10);
-            var d2 = CalcularDigitoVerificador(digitos, 10, 11);
-
-            return (digitos[9] - '0') == d1 && (digitos[10] - '0') == d2;
-        }
-
-        private static int CalcularDigitoVerificador(string digitos, int tamanhoBase, int pesoInicial)
-        {
-            var soma = 0;
-            for (var i = 0; i < tamanhoBase; i++)
-            {
-                soma += (digitos[i] - '0') * (pesoInicial - i);
-            }
-
-            var resto = soma % 11;
-            return resto < 2 ? 0 : 11 - resto;
         }
 
         private static string ExtrairDigitos(string valor)

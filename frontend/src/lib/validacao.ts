@@ -13,25 +13,10 @@ export function formatarCpf(valor: string): string {
   return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9)}`;
 }
 
-/** Valida CPF verificando 11 dígitos, sequências repetidas e dígitos verificadores (módulo 11). */
+/** Valida CPF verificando apenas se possui 11 dígitos numéricos (aceita CPFs fictícios). */
 export function validarCpf(cpf: string): boolean {
   const digitos = somenteDigitos(cpf);
-  if (digitos.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(digitos)) return false;
-
-  const calcularDigito = (base: string, pesoInicial: number): number => {
-    let soma = 0;
-    for (let i = 0; i < base.length; i++) {
-      soma += Number(base[i]) * (pesoInicial - i);
-    }
-    const resto = soma % 11;
-    return resto < 2 ? 0 : 11 - resto;
-  };
-
-  const d1 = calcularDigito(digitos.slice(0, 9), 10);
-  const d2 = calcularDigito(digitos.slice(0, 10), 11);
-
-  return Number(digitos[9]) === d1 && Number(digitos[10]) === d2;
+  return digitos.length === 11;
 }
 
 const REGEX_EMAIL_GERAL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
