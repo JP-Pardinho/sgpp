@@ -12,5 +12,6 @@ namespace sgpp.Repositories.Interfaces
         Task<bool> Delete(string codigo);
         Task<string?> GetTipoParticipanteByCpf(string cpf);
         Task InserirVinculoParticipante(string projetoCodigo, string participanteCpf, string funcao, DateTime dataEntrada);
+        Task<string> GerarProximoCodigo(int ano);
     }
 }

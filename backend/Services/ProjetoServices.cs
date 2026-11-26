@@ -32,6 +32,17 @@ namespace sgpp.Services
 
         public async Task<Projeto> Create(Projeto projeto)
         {
+            if (projeto is null)
+            {
+                throw new ArgumentException("Os dados do projeto são obrigatórios.");
+            }
+
+            if (string.IsNullOrWhiteSpace(projeto.codigo))
+            {
+                var ano = projeto.dataInicio != default ? projeto.dataInicio.Year : DateTime.Today.Year;
+                projeto.codigo = await _projetoRepository.GerarProximoCodigo(ano);
+            }
+
             await ValidarDadosProjetoAsync(projeto);
 
             var existente = await _projetoRepository.GetByCodigo(projeto.codigo);

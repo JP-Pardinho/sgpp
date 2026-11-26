@@ -25,7 +25,8 @@ interface Dados {
 }
 
 export default function DetalhesProjeto() {
-    const { codigo } = useParams<{ codigo: string }>();
+    const params = useParams<{ codigo: string }>();
+    const codigo = decodeURIComponent(params.codigo);
     const [dados, setDados] = useState<Dados | null>(null);
     const [erro, setErro] = useState<string | null>(null);
 
