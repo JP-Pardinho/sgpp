@@ -24,6 +24,10 @@ builder.Services.AddScoped<IProducaoRepository, ProducaoRepository>();
 builder.Services.AddScoped<ProducaoServices>();
 builder.Services.AddScoped<IVinculoRepository, VinculoRepository>();
 builder.Services.AddScoped<VinculoServices>();
+builder.Services.AddScoped<IConsultaRepository, ConsultaRepository>();
+builder.Services.AddScoped<ConsultaServices>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<DashboardServices>();
 
 // 3. Configuração de CORS para o Front-end Next.js (localhost:3000)
 const string corsPolicyName = "SgppFrontendPolicy";
