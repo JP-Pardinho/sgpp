@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import { btnContorno, btnPrimario } from "@/app/_components/ui/Botoes";
 import Icon from "@/app/_components/ui/Icon";
+import { obterPermissoes } from "@/lib/permissoes";
 import { somenteDigitos } from "@/lib/validacao";
 import { participantesService, type Participante } from "@/services/participanteServices";
 import ListaParticipantes from "./ListaParticipantes";
@@ -21,7 +23,10 @@ export default function ParticipantesTela() {
 }
 
 function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
+  const usuario = useUsuario();
+  const permissoes = obterPermissoes(usuario?.perfil);
   const [aba, setAba] = useState<AbaAtiva>(abaInicial);
+  const abaAtiva: AbaAtiva = permissoes.gerenciarParticipantes ? aba : "listar";
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erroLista, setErroLista] = useState<string | null>(null);
@@ -81,7 +86,7 @@ function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
     <PaginaSistema
       titulo="Participantes"
       breadcrumb={
-        aba === "listar"
+        abaAtiva === "listar"
           ? [
               { rotulo: "Início", href: "/" },
               { rotulo: "Participantes" },
@@ -94,16 +99,20 @@ function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
             ]
       }
       acoes={
-        <>
-          <Link href="/participantes/vincular" className={btnContorno}>
-            Vincular a projeto
-          </Link>
-          {aba === "listar" && (
-            <button type="button" onClick={() => setAba("cadastrar")} className={btnPrimario}>
-              <Icon nome="plus" className="h-4 w-4" /> Novo participante
-            </button>
-          )}
-        </>
+        permissoes.gerenciarEquipes || permissoes.gerenciarParticipantes ? (
+          <>
+            {permissoes.gerenciarEquipes && (
+              <Link href="/participantes/vincular" className={btnContorno}>
+                Vincular a projeto
+              </Link>
+            )}
+            {permissoes.gerenciarParticipantes && abaAtiva === "listar" && (
+              <button type="button" onClick={() => setAba("cadastrar")} className={btnPrimario}>
+                <Icon nome="plus" className="h-4 w-4" /> Novo participante
+              </button>
+            )}
+          </>
+        ) : undefined
       }
     >
       {/* Abas: Ver cadastrados | Cadastrar participante */}
@@ -113,11 +122,11 @@ function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
             type="button"
             role="tab"
             id="tab-listar"
-            aria-selected={aba === "listar"}
+            aria-selected={abaAtiva === "listar"}
             aria-controls="painel-listar"
             onClick={() => setAba("listar")}
             className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              aba === "listar"
+              abaAtiva === "listar"
                 ? "border-sgpp-700 text-sgpp-700"
                 : "border-transparent text-slate-600 hover:text-slate-900"
             }`}
@@ -128,30 +137,33 @@ function ParticipantesTelaInterna({ abaInicial }: { abaInicial: AbaAtiva }) {
             </span>
           </button>
 
-          <button
-            type="button"
-            role="tab"
-            id="tab-cadastrar"
-            aria-selected={aba === "cadastrar"}
-            aria-controls="painel-cadastrar"
-            onClick={() => setAba("cadastrar")}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              aba === "cadastrar"
-                ? "border-sgpp-700 text-sgpp-700"
-                : "border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Cadastrar participante
-          </button>
+          {permissoes.gerenciarParticipantes && (
+            <button
+              type="button"
+              role="tab"
+              id="tab-cadastrar"
+              aria-selected={abaAtiva === "cadastrar"}
+              aria-controls="painel-cadastrar"
+              onClick={() => setAba("cadastrar")}
+              className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                abaAtiva === "cadastrar"
+                  ? "border-sgpp-700 text-sgpp-700"
+                  : "border-transparent text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Cadastrar participante
+            </button>
+          )}
         </div>
       </div>
 
-      {aba === "listar" ? (
+      {abaAtiva === "listar" ? (
         <div role="tabpanel" id="painel-listar" aria-labelledby="tab-listar">
           <ListaParticipantes
             participantes={participantes}
             carregando={carregando}
             erro={erroLista}
+            podeExcluir={permissoes.gerenciarParticipantes}
             onExcluir={handleExcluir}
           />
         </div>

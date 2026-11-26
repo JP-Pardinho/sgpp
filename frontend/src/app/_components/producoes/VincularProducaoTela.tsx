@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useUsuario } from "@/app/_components/layout/AuthGuard";
 import PaginaSistema from "@/app/_components/layout/PaginaSistema";
 import { btnContorno, btnPrimario, btnSecundario, inputBase } from "@/app/_components/ui/Botoes";
 import Icon from "@/app/_components/ui/Icon";
+import { obterPermissoes } from "@/lib/permissoes";
 import { formatarCpf, somenteDigitos } from "@/lib/validacao";
 import { participantesService, type Participante } from "@/services/participanteServices";
 import { producoesService, type ProducaoCientifica } from "@/services/producaoServices";
@@ -37,6 +39,8 @@ function VincularProducaoInterna({
   producaoInicial: string;
   projetoInicial: string;
 }) {
+  const usuario = useUsuario();
+  const permissoes = obterPermissoes(usuario?.perfil);
   const [producoes, setProducoes] = useState<ProducaoCientifica[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [participantes, setParticipantes] = useState<Participante[]>([]);
@@ -311,12 +315,14 @@ function VincularProducaoInterna({
                 Busque e selecione um ou mais autores dentre os participantes previamente cadastrados (RN04).
               </p>
             </div>
-            <Link
-              href="/participantes?aba=cadastrar"
-              className="text-sm font-medium text-blue-700 hover:underline"
-            >
-              + Cadastrar participante
-            </Link>
+            {permissoes.gerenciarParticipantes && (
+              <Link
+                href="/participantes?aba=cadastrar"
+                className="text-sm font-medium text-blue-700 hover:underline"
+              >
+                + Cadastrar participante
+              </Link>
+            )}
           </div>
 
           {/* Tags / chips dos autores selecionados */}
