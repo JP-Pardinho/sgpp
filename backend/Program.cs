@@ -22,6 +22,10 @@ builder.Services.AddScoped<IFinanciamentoRepository, FinanciamentoRepository>();
 builder.Services.AddScoped<FinanciamentoServices>();
 builder.Services.AddScoped<IProducaoRepository, ProducaoRepository>();
 builder.Services.AddScoped<ProducaoServices>();
+builder.Services.AddScoped<IConsultaRepository, ConsultaRepository>();
+builder.Services.AddScoped<ConsultaServices>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<DashboardServices>();
 // Exemplo de como registrar conforme as interfaces forem implementadas:
 // builder.Services.AddScoped<VinculoService>();
 
