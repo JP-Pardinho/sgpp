@@ -12,5 +12,11 @@ namespace sgpp.Repositories.Interfaces
         Task<bool> Update(ProducaoCientifica producao);
         Task<bool> Delete(int id);
         Task<bool> ProjetoExiste(string codigo);
+        Task<bool> AtualizarProjetoCodigo(int idProducao, string projetoCodigo);
+        Task<IEnumerable<AutorProducao>> ListarAutores(int idProducao);
+        Task<Dictionary<int, List<AutorProducao>>> ListarAutoresPorProducoes(IEnumerable<int> idsProducoes);
+        Task InserirAutor(int idProducao, string participanteCpf);
+        Task SincronizarAutores(int idProducao, IEnumerable<string> cpfsAutores);
+        Task<bool> RemoverAutor(int idProducao, string participanteCpf);
     }
 }

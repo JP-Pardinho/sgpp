@@ -150,8 +150,8 @@ export const producoesService = {
       return mockApi.vincularProducao(payload);
     }
 
-    const atualizada = await apiFetch<ProducaoApiDto>(`/producoes/${payload.producaoId}/vinculo`, {
-      method: "PUT",
+    const atualizada = await apiFetch<ProducaoApiDto>(`/producoes/${payload.producaoId}/vincular`, {
+      method: "POST",
       body: JSON.stringify({
         projetoCodigo: payload.projetoCodigo,
         autoresCpfs: payload.autoresCpfs,
@@ -159,6 +159,22 @@ export const producoesService = {
     });
     return normalizarProducaoApi(atualizada);
   },
+
+  listarAutores: async (id: number): Promise<AutorProducao[]> => {
+    if (USE_MOCK) {
+      const prod = await mockApi.buscarProducao(id);
+      return prod.autores;
+    }
+
+    return apiFetch<AutorProducao[]>(`/producoes/${id}/autores`);
+  },
+
+  removerAutor: (id: number, cpf: string): Promise<void> =>
+    USE_MOCK
+      ? Promise.resolve()
+      : apiFetch<void>(`/producoes/${id}/autores/${encodeURIComponent(cpf)}`, {
+          method: "DELETE",
+        }),
 
   excluir: (id: number): Promise<void> =>
     USE_MOCK

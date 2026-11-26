@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace sgpp.Models
 {
@@ -10,6 +11,7 @@ namespace sgpp.Models
         public string tipoProducao { get; set; } = string.Empty;
         public int anoPublicacao { get; set; }
         public string meioDivulgacao { get; set; } = string.Empty;
+        public List<AutorProducao> autores { get; set; } = new();
 
         public ProducaoCientifica() { }
 
@@ -21,6 +23,17 @@ namespace sgpp.Models
             this.tipoProducao = producao.tipoProducao;
             this.anoPublicacao = producao.anoPublicacao;
             this.meioDivulgacao = producao.meioDivulgacao;
+            this.autores = producao.autores is not null
+                ? new List<AutorProducao>(producao.autores)
+                : new List<AutorProducao>();
         }
+    }
+
+    public class AutorProducao
+    {
+        public string cpf { get; set; } = string.Empty;
+        public string nome { get; set; } = string.Empty;
+        public string emailInstitucional { get; set; } = string.Empty;
+        public string tipo { get; set; } = string.Empty;
     }
 }
